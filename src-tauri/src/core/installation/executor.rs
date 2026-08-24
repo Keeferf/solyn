@@ -1,4 +1,3 @@
-// src/core/installation/executor.rs
 use tauri;
 use tauri::Manager;
 use tauri_plugin_shell::ShellExt;
@@ -6,8 +5,6 @@ use std::time::Duration;
 use crate::helpers::terminal_output_cleaner::{broadcast_terminal_line, parse_and_emit_terminal_output};
 use crate::core::ollama::client::{is_ollama_installed, is_ollama_running, start_ollama, fetch_ollama_version};
 
-/// Execute the Ollama installation process for the current platform
-/// This matches the EXACT behavior of the original installation_executor.rs
 pub async fn execute_ollama_installation(
     app_handle: &tauri::AppHandle,
     window: &tauri::WebviewWindow,
@@ -191,7 +188,6 @@ pub async fn execute_ollama_update(
     // Wait for the update to complete with extended timeout
     let max_attempts = 25;
     let mut attempts = 0;
-    let mut new_version = None;
     let mut ollama_started = false;
     
     while attempts < max_attempts {
@@ -204,7 +200,6 @@ pub async fn execute_ollama_update(
                 // Check if it's running and get version
                 match fetch_ollama_version().await {
                     Ok(version) => {
-                        new_version = Some(version.clone());
                         // Version should be different (or at least we assume it updated)
                         if version != current_version || attempts > 15 {
                             broadcast_terminal_line(window, 
