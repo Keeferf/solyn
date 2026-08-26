@@ -1,4 +1,3 @@
-// src/core/ollama/chat.rs
 use reqwest;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -56,7 +55,11 @@ pub struct OllamaChatClient {
 impl OllamaChatClient {
     pub fn new() -> Self {
         Self {
-            client: reqwest::Client::new(),
+            client: reqwest::Client::builder()
+                .timeout(Duration::from_secs(300))
+                .pool_max_idle_per_host(1)  // Keep connection alive for reuse
+                .build()
+                .unwrap_or_default(),
             base_url: "http://localhost:11434".to_string(),
         }
     }
@@ -75,7 +78,7 @@ impl OllamaChatClient {
         }
     }
 
-    /// Send a chat message (streaming) - Collects full response before sending
+    /// Send a chat message (streaming)
     pub async fn chat_stream(
         &self,
         model_name: &str,
@@ -119,7 +122,7 @@ impl OllamaChatClient {
                     let stream = resp.bytes_stream();
                     let mut stream = Box::pin(stream);
                     let mut buffer = String::new();
-                    let mut full_content = String::new(); // Collect full response
+                    let mut full_content = String::new();
                     let mut final_response: Option<ChatResponse> = None;
                     
                     while let Some(chunk_result) = stream.next().await {
@@ -152,6 +155,9 @@ impl OllamaChatClient {
                                             // Accumulate content
                                             if !chunk.message.content.is_empty() {
                                                 full_content.push_str(&chunk.message.content);
+                                                
+                                                // ✅ FIX: Send chunk immediately as it arrives
+                                                let _ = tx.send(ChatEvent::MessageChunk(full_content.clone()));
                                             }
                                             
                                             // Store the final response when done
@@ -178,12 +184,6 @@ impl OllamaChatClient {
                                 return;
                             }
                         }
-                    }
-                    
-                    // After streaming is complete, send the full response
-                    if !full_content.is_empty() {
-                        println!("✅ Sending complete response for model: {}", model);
-                        let _ = tx.send(ChatEvent::MessageChunk(full_content.clone()));
                     }
                     
                     // Send the done event with the complete response
