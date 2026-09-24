@@ -11,9 +11,7 @@ export const TitleBar = () => {
       try {
         const maximized = await appWindow.isMaximized();
         setIsMaximized(maximized);
-      } catch (error) {
-        console.error("Failed to check maximized state:", error);
-      }
+      } catch {}
     };
 
     checkMaximized();
@@ -22,39 +20,31 @@ export const TitleBar = () => {
       appWindow
         .isMaximized()
         .then(setIsMaximized)
-        .catch((err) => {
-          console.error("Failed to update maximized state on resize:", err);
-        });
+        .catch(() => {});
     });
 
     return () => {
-      unlisten.then((fn) => fn()).catch(console.error);
+      unlisten.then((fn) => fn()).catch(() => {});
     };
   }, [appWindow]);
 
   const handleMinimize = async () => {
     try {
       await appWindow.minimize();
-    } catch (error) {
-      console.error("Failed to minimize:", error);
-    }
+    } catch {}
   };
 
   const handleMaximize = async () => {
     try {
       await appWindow.toggleMaximize();
       setIsMaximized(!isMaximized);
-    } catch (error) {
-      console.error("Failed to toggle maximize:", error);
-    }
+    } catch {}
   };
 
   const handleClose = async () => {
     try {
       await appWindow.close();
-    } catch (error) {
-      console.error("Failed to close application:", error);
-    }
+    } catch {}
   };
 
   return (

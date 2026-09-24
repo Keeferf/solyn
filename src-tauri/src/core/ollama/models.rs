@@ -102,9 +102,6 @@ impl OllamaModelClient {
                     if let Some(error) = json.get("error") {
                         return Err(format!("Ollama error: {}", error));
                     }
-                    if let Some(status_msg) = json.get("status") {
-                        println!("✅ Model creation status: {}", status_msg);
-                    }
                 }
                 Ok(format!("Model '{}' created successfully", model_name))
             } else {

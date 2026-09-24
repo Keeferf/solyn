@@ -97,10 +97,8 @@ impl OllamaChatClient {
         let (tx, rx) = mpsc::unbounded_channel();
 
         let client = self.client.clone();
-        let model = model_name.to_string();
         
         tokio::spawn(async move {
-            println!("📤 Starting chat stream for model: {}", model);
             
             let response = client
                 .post(&url)
@@ -113,7 +111,6 @@ impl OllamaChatClient {
                 Ok(resp) => {
                     if !resp.status().is_success() {
                         let error_msg = format!("HTTP error: {}", resp.status());
-                        println!("❌ {}", error_msg);
                         let _ = tx.send(ChatEvent::Error(error_msg));
                         return;
                     }
@@ -168,7 +165,6 @@ impl OllamaChatClient {
                                             // Try to parse as error response
                                             if let Ok(json) = serde_json::from_str::<serde_json::Value>(line) {
                                                 if let Some(error) = json.get("error").and_then(|e| e.as_str()) {
-                                                    println!("❌ Ollama error: {}", error);
                                                     let _ = tx.send(ChatEvent::Error(error.to_string()));
                                                     return;
                                                 }
@@ -179,7 +175,6 @@ impl OllamaChatClient {
                             }
                             Err(e) => {
                                 let error_msg = format!("Failed to read chunk: {}", e);
-                                println!("❌ {}", error_msg);
                                 let _ = tx.send(ChatEvent::Error(error_msg));
                                 return;
                             }
@@ -189,7 +184,6 @@ impl OllamaChatClient {
                     // Send the done event with the complete response
                     if let Some(mut chunk) = final_response {
                         chunk.message.content = full_content;
-                        println!("✅ Chat stream completed for model: {}", model);
                         let _ = tx.send(ChatEvent::Done(chunk));
                     } else {
                         // If we didn't get a proper done response, create one
@@ -211,7 +205,6 @@ impl OllamaChatClient {
                 }
                 Err(e) => {
                     let error_msg = format!("Request failed: {}", e);
-                    println!("❌ {}", error_msg);
                     let _ = tx.send(ChatEvent::Error(error_msg));
                 }
             }
@@ -236,7 +229,6 @@ impl OllamaChatClient {
             options,
         };
 
-        println!("📤 Sending sync chat request to model: {}", model_name);
 
         let response = self.client
             .post(&url)
@@ -250,7 +242,6 @@ impl OllamaChatClient {
             let chat_response: ChatResponse = response.json()
                 .await
                 .map_err(|e| format!("Failed to parse response: {}", e))?;
-            println!("✅ Sync chat completed for model: {}", model_name);
             Ok(chat_response)
         } else {
             let error_text = response.text().await.unwrap_or_default();

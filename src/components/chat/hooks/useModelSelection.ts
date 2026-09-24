@@ -83,7 +83,6 @@ export const useModelSelection = () => {
         }
       }
     } catch (error) {
-      console.error("Failed to load installed models:", error);
       setModels([
         {
           value: "error",
@@ -133,13 +132,10 @@ export const useModelSelection = () => {
     const setupListener = async () => {
       try {
         const unlisten = await listen("model-download-complete", () => {
-          console.log("Model download completed, refreshing model list...");
           loadModels();
         });
         unlistenFn = unlisten;
-      } catch (error) {
-        console.error("Failed to set up model download listener:", error);
-      }
+      } catch {}
     };
 
     setupListener();

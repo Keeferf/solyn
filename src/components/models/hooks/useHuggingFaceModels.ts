@@ -88,7 +88,6 @@ export const useHuggingFaceModels = (
             });
           }
         } catch (countErr) {
-          console.warn("Failed to get total count, using fallback:", countErr);
           total = maxModels;
         }
 
@@ -200,9 +199,7 @@ export const useHuggingFaceModels = (
 
     try {
       await invoke("clear_models_cache", { filter: currentFilter });
-    } catch (err) {
-      console.warn("Failed to clear cache:", err);
-    }
+    } catch {}
 
     await loadInitialModels(currentFilter, searchQuery, false);
   }, [loadInitialModels, currentFilter, searchQuery]);

@@ -54,9 +54,7 @@ export const DownloadStatusDisplay = ({
       if (onCancel) {
         onCancel();
       }
-    } catch (error) {
-      console.error("Failed to cancel download:", error);
-    }
+    } catch {}
   };
 
   const StatusIcon = () => {

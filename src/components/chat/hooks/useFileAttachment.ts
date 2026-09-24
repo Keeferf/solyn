@@ -15,7 +15,6 @@ export const useFileAttachment = () => {
       const newFiles = Array.from(files);
       setAttachments((prev) => [...prev, ...newFiles]);
 
-      console.log("Files attached:", newFiles);
       setIsAttachmentEnabled(true);
 
       e.target.value = "";

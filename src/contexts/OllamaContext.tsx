@@ -36,7 +36,6 @@ export const OllamaProvider = ({ children }: { children: ReactNode }) => {
       const result = await invoke<OllamaStatus>("refresh_ollama_status");
       setStatus(result);
     } catch (error) {
-      console.error("Failed to check Ollama status:", error);
       setStatus({
         installed: false,
         running: false,
@@ -62,7 +61,6 @@ export const OllamaProvider = ({ children }: { children: ReactNode }) => {
       await invoke<string>("start_ollama_service");
       await refreshOllamaStatus();
     } catch (error) {
-      console.error("Failed to start Ollama:", error);
       throw error;
     } finally {
       setLoading(false);
@@ -76,7 +74,6 @@ export const OllamaProvider = ({ children }: { children: ReactNode }) => {
 
     // Listen for status updates via events
     const unlisten = listen<OllamaStatus>("ollama-status-update", (event) => {
-      console.log("Received status update from backend:", event.payload);
       setStatus(event.payload);
       setLoading(false);
       setRefreshing(false);

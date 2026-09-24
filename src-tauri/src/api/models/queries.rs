@@ -97,11 +97,9 @@ pub async fn get_chat_models(
     let ollama_client = OllamaModelClient::new();
     let ollama_models = match ollama_client.list_models().await {
         Ok(models) => {
-            println!("📋 Ollama models found: {:?}", models);
             models
         },
-        Err(e) => {
-            println!("⚠️ Could not get Ollama models: {}", e);
+        Err(_) => {
             Vec::new()
         }
     };
@@ -150,8 +148,6 @@ pub async fn get_chat_models(
                 base_ollama_name.clone()
             };
             
-            println!("🔍 Model: {}, Base name: {}, Actual name: {}, Registered: {}", 
-                model.model_id, base_ollama_name, actual_ollama_name, is_registered);
             
             let model_value = serde_json::json!({
                 "value": format!("{}:{}", model.model_id, file.filename),
@@ -173,7 +169,6 @@ pub async fn get_chat_models(
         }
     }
     
-    println!("✅ Returning {} chat models", chat_models.len());
     Ok(chat_models)
 }
 

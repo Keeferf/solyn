@@ -31,12 +31,7 @@ export const useChatPreviews = (chats: ChatSession[]) => {
                   newPreviews.set(session.id, firstLine);
                 }
               }
-            } catch (error) {
-              console.error(
-                `Failed to load preview for chat ${session.id}:`,
-                error,
-              );
-            }
+            } catch {}
           }),
         );
 
