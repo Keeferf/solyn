@@ -125,13 +125,11 @@ pub async fn is_ollama_installed() -> Result<bool, String> {
     {
         use std::path::Path;
 
-        // GUI apps often inherit a minimal PATH (notably macOS launched from
-        // Finder, which can't see Homebrew), so check common install locations
-        // before falling back to `which`.
+        // GUI apps often inherit a minimal PATH, so check common install
+        // locations before falling back to `which`.
         let common_paths = [
             "/usr/local/bin/ollama",
             "/usr/bin/ollama",
-            "/opt/homebrew/bin/ollama",
             "/snap/bin/ollama",
             "/var/lib/flatpak/exports/bin/ollama",
         ];
@@ -235,34 +233,11 @@ pub async fn start_ollama(_app_handle: &AppHandle) -> Result<String, String> {
         Err("Ollama failed to start after 3 seconds".to_string())
     }
     
-    #[cfg(target_os = "macos")]
-    {
-        let output = std::process::Command::new("open")
-            .args(&["-a", "Ollama"])
-            .output()
-            .map_err(|e| format!("Failed to start Ollama: {}", e))?;
-        
-        if !output.status.success() {
-            return Err("Failed to start Ollama".to_string());
-        }
-        
-        // macOS startup is slower; poll every 500ms for up to 4 seconds
-        for _ in 0..8 {
-            tokio::time::sleep(Duration::from_millis(500)).await;
-            
-            if is_ollama_running().await? {
-                return Ok("Ollama started successfully".to_string());
-            }
-        }
-        
-        Err("Ollama is starting but not ready yet".to_string())
-    }
-    
     #[cfg(target_os = "linux")]
     {
         // The official installer registers a *system* service named `ollama`;
         // some setups use a user service. Try both, then fall back to launching
-        // the server directly (WSL / containers without systemd).
+        // the server directly (containers without systemd).
         for args in [
             vec!["start", "ollama.service"],
             vec!["--user", "start", "ollama.service"],
@@ -297,7 +272,7 @@ pub async fn start_ollama(_app_handle: &AppHandle) -> Result<String, String> {
         Err("Ollama is starting but not ready yet".to_string())
     }
     
-    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
     {
         Err("Unsupported platform for starting Ollama".to_string())
     }
@@ -311,7 +286,7 @@ pub async fn get_installation_instructions() -> Result<InstallationInformation, 
             "irm https://ollama.com/install.ps1 | iex".to_string(),
             "~5 minutes".to_string(),
         ),
-        "macos" | "linux" => (
+        "linux" => (
             "curl -fsSL https://ollama.com/install.sh | sh".to_string(),
             "~5 minutes".to_string(),
         ),

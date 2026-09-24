@@ -3,8 +3,6 @@ pub mod verifier;
 
 pub use executor::{
     execute_ollama_installation,
-    execute_ollama_installation_with_retry,
-    execute_ollama_installation_with_auto_start,
     execute_ollama_update, 
     save_installation_log,
     get_installation_recommendation,

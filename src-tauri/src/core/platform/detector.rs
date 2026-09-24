@@ -5,11 +5,9 @@ use std::env;
 pub fn detect_operating_system() -> String {
     #[cfg(target_os = "windows")]
     { "windows".to_string() }
-    #[cfg(target_os = "macos")]
-    { "macos".to_string() }
     #[cfg(target_os = "linux")]
     { "linux".to_string() }
-    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
     { "unknown".to_string() }
 }
 
@@ -17,20 +15,15 @@ pub fn detect_operating_system() -> String {
 pub fn get_platform_family() -> String {
     #[cfg(target_os = "windows")]
     { "windows".to_string() }
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(target_os = "linux")]
     { "unix".to_string() }
-    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
     { "unknown".to_string() }
 }
 
 /// Check if the current platform is Windows
 pub fn is_windows() -> bool {
     cfg!(target_os = "windows")
-}
-
-/// Check if the current platform is macOS
-pub fn is_macos() -> bool {
-    cfg!(target_os = "macos")
 }
 
 /// Check if the current platform is Linux
@@ -48,14 +41,6 @@ pub fn get_platform_display_name() -> String {
             "Windows".to_string()
         }
     }
-    #[cfg(target_os = "macos")]
-    { 
-        if let Ok(version) = get_macos_version() {
-            format!("macOS {}", version)
-        } else {
-            "macOS".to_string()
-        }
-    }
     #[cfg(target_os = "linux")]
     { 
         if let Ok(distro) = get_linux_distro() {
@@ -64,7 +49,7 @@ pub fn get_platform_display_name() -> String {
             "Linux".to_string()
         }
     }
-    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
     { "Unknown".to_string() }
 }
 
@@ -72,11 +57,9 @@ pub fn get_platform_display_name() -> String {
 pub fn get_platform_icon() -> String {
     #[cfg(target_os = "windows")]
     { "🪟".to_string() }
-    #[cfg(target_os = "macos")]
-    { "🍎".to_string() }
     #[cfg(target_os = "linux")]
     { "🐧".to_string() }
-    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
     { "💻".to_string() }
 }
 
@@ -97,20 +80,6 @@ fn get_windows_version() -> Result<String, String> {
         .unwrap_or_else(|_| "Unknown".to_string());
     
     Ok(format!("{} (Build {})", product_name, release_id))
-}
-
-/// Get macOS version (macOS only)
-#[cfg(target_os = "macos")]
-fn get_macos_version() -> Result<String, String> {
-    use std::process::Command;
-    
-    let output = Command::new("sw_vers")
-        .args(&["-productVersion"])
-        .output()
-        .map_err(|e| format!("Failed to get macOS version: {}", e))?;
-    
-    let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    Ok(version)
 }
 
 /// Get Linux distribution (Linux only)
@@ -173,13 +142,6 @@ pub fn get_platform_info_detailed() -> PlatformInfo {
     #[cfg(target_os = "windows")]
     {
         if let Ok(version) = get_windows_version() {
-            details.insert("version".to_string(), version);
-        }
-    }
-    
-    #[cfg(target_os = "macos")]
-    {
-        if let Ok(version) = get_macos_version() {
             details.insert("version".to_string(), version);
         }
     }

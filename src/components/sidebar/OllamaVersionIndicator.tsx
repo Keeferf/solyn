@@ -116,17 +116,9 @@ export const OllamaVersionIndicator = () => {
 
     try {
 
-      // Add a timeout to the invoke call
-      const updatePromise = invoke("update_ollama");
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(
-          () => reject(new Error("Update timed out after 60 seconds")),
-          60000,
-        ),
-      );
-
-      await Promise.race([updatePromise, timeoutPromise]);
-
+      // The backend bounds its own work; a download + reinstall can easily
+      // exceed a minute, so don't race it against a fixed timeout.
+      await invoke("update_ollama");
 
       // Wait a moment for the update to actually take effect
       await new Promise((resolve) => setTimeout(resolve, 3000));
@@ -155,9 +147,12 @@ export const OllamaVersionIndicator = () => {
       // Reset success state after 5 seconds
       setTimeout(() => setUpdateSuccess(false), 5000);
     } catch (error) {
+      // Keep isOutdated true so the error branch below is reachable and the
+      // button can return for a retry. Forcing it false hid the failure and
+      // made the button vanish silently.
       setUpdateError(error instanceof Error ? error.message : "Update failed");
       setUpdating(false);
-      setIsOutdated(false);
+      setTimeout(() => setUpdateError(null), 8000);
     }
   };
 
@@ -176,9 +171,12 @@ export const OllamaVersionIndicator = () => {
 
   if (updateError) {
     return (
-      <div className="flex items-center gap-1.5 px-2 py-1 bg-red-500/10 border border-red-500/20 rounded-lg text-xs">
+      <div
+        className="flex items-center gap-1.5 px-2 py-1 bg-red-500/10 border border-red-500/20 rounded-lg text-xs max-w-48"
+        title={updateError}
+      >
         <FiAlertCircle className="w-3 h-3 text-red-500 shrink-0" />
-        <span className="font-medium text-red-500">Update failed</span>
+        <span className="font-medium text-red-500 truncate">{updateError}</span>
       </div>
     );
   }
