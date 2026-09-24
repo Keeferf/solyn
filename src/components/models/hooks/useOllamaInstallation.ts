@@ -204,7 +204,6 @@ const getPlatformDisplay = (installInfo: InstallInfo | null): string => {
   if (!installInfo) return "Your Platform";
   const platformMap: Record<string, string> = {
     windows: "Windows",
-    macos: "macOS",
     linux: "Linux",
   };
   return platformMap[installInfo.platform] || installInfo.platform;

@@ -14,13 +14,6 @@ pub async fn get_platform_info_detailed(_app_handle: AppHandle) -> Result<Platfo
     
     let version = if cfg!(target_os = "windows") {
         std::env::var("OS").ok()
-    } else if cfg!(target_os = "macos") {
-        std::process::Command::new("sw_vers")
-            .arg("-productVersion")
-            .output()
-            .ok()
-            .and_then(|output| String::from_utf8(output.stdout).ok())
-            .map(|s| s.trim().to_string())
     } else if cfg!(target_os = "linux") {
         std::fs::read_to_string("/etc/os-release")
             .ok()

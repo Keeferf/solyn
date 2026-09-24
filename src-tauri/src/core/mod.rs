@@ -5,8 +5,6 @@ pub mod platform;
 
 pub use installation::executor::{
     execute_ollama_installation,
-    execute_ollama_installation_with_auto_start,
-    execute_ollama_installation_with_retry,
     save_installation_log,
     get_installation_recommendation,
 };
