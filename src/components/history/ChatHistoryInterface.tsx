@@ -68,9 +68,7 @@ export const ChatHistoryInterface = ({
 
       // Navigate back to chat view
       onNavigateToChat?.();
-    } catch (error) {
-      console.error("Failed to load chat:", error);
-    }
+    } catch {}
   };
 
   const handleRename = (chatId: number) => {

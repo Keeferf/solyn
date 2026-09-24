@@ -83,12 +83,7 @@ export const OllamaVersionIndicator = () => {
 
       const isOutdated = compareVersions(currentVersion, latest) < 0;
       setIsOutdated(isOutdated);
-
-      if (isOutdated) {
-        console.log(`Update available: ${currentVersion} → ${latest}`);
-      }
     } catch (error) {
-      console.error("Failed to check Ollama updates:", error);
       setIsOutdated(false);
     } finally {
       setChecking(false);
@@ -120,7 +115,6 @@ export const OllamaVersionIndicator = () => {
     setProgress(0);
 
     try {
-      console.log("Starting Ollama update...");
 
       // Add a timeout to the invoke call
       const updatePromise = invoke("update_ollama");
@@ -133,7 +127,6 @@ export const OllamaVersionIndicator = () => {
 
       await Promise.race([updatePromise, timeoutPromise]);
 
-      console.log("Ollama update command completed");
 
       // Wait a moment for the update to actually take effect
       await new Promise((resolve) => setTimeout(resolve, 3000));
@@ -147,9 +140,7 @@ export const OllamaVersionIndicator = () => {
         try {
           await refreshOllamaStatus();
           statusRefreshed = true;
-          console.log("Status refreshed successfully");
         } catch (error) {
-          console.error(`Refresh attempt ${retries + 1} failed:`, error);
           retries++;
           if (retries < maxRetries) {
             await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -164,7 +155,6 @@ export const OllamaVersionIndicator = () => {
       // Reset success state after 5 seconds
       setTimeout(() => setUpdateSuccess(false), 5000);
     } catch (error) {
-      console.error("Failed to update Ollama:", error);
       setUpdateError(error instanceof Error ? error.message : "Update failed");
       setUpdating(false);
       setIsOutdated(false);

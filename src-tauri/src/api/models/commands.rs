@@ -105,11 +105,6 @@ pub async fn generate_modelfile(
         model_id.replace("/", "_")
     };
     
-    println!("📝 Generating Modelfile for:");
-    println!("  Model ID: {}", model_id);
-    println!("  Filename: {}", filename);
-    println!("  Quantization: {}", quantization);
-    println!("  Ollama name: {}", ollama_model_name);
     
     let config = ModelFileConfig {
         model_id: model_id.clone(),
@@ -137,14 +132,10 @@ pub async fn create_ollama_model(
     // The model name should match what was generated in generate_modelfile
     let model_name = request.model_name.trim().to_string();
     
-    println!("🔄 Creating Ollama model:");
-    println!("  Model name: {}", model_name);
-    println!("  Modelfile path: {:?}", modelfile_path);
     
     // Verify modelfile exists
     if !modelfile_path.exists() {
         let error_msg = format!("Modelfile not found at: {:?}", modelfile_path);
-        println!("❌ {}", error_msg);
         return Err(error_msg);
     }
     
@@ -152,8 +143,7 @@ pub async fn create_ollama_model(
     let model_client_clone = OllamaModelClient::new();
     let existing_models = match model_client_clone.list_models().await {
         Ok(models) => models,
-        Err(e) => {
-            println!("⚠️ Could not list models: {}", e);
+        Err(_) => {
             Vec::new()
         }
     };
@@ -163,20 +153,17 @@ pub async fn create_ollama_model(
     });
     
     if model_exists {
-        println!("⚠️ Model '{}' already exists in Ollama", model_name);
         return Ok(model_name);
     }
     
     // Create the model
     let result = model_client.create_model(&model_name, &modelfile_path).await?;
-    println!("✅ Model created: {}", result);
     
     // Verify the model was created
     let verify_client = OllamaModelClient::new();
     let verify_models = match verify_client.list_models().await {
         Ok(models) => models,
-        Err(e) => {
-            println!("⚠️ Could not verify model creation: {}", e);
+        Err(_) => {
             return Ok(result);
         }
     };
@@ -186,10 +173,8 @@ pub async fn create_ollama_model(
     });
     
     if found {
-        println!("✅ Verified model '{}' exists in Ollama", model_name);
         Ok(result)
     } else {
-        println!("⚠️ Model was created but not found in list. Available: {:?}", verify_models);
         Ok(result) // Assume it worked since create_model succeeded
     }
 }
@@ -227,8 +212,6 @@ pub async fn test_chat_with_model(
 ) -> Result<String, String> {
     use crate::core::ollama::chat::{OllamaChatClient, ChatMessage};
     
-    println!("🧪 Testing chat with model: {}", model_name);
-    println!("💬 Message: {}", message);
     
     let chat_client = OllamaChatClient::new();
     
@@ -251,7 +234,6 @@ pub async fn test_chat_with_model(
     
     match actual_model {
         Some(found_model) => {
-            println!("✅ Found model: {}", found_model);
             
             let messages = vec![
                 ChatMessage {
@@ -265,7 +247,6 @@ pub async fn test_chat_with_model(
         }
         None => {
             let error_msg = format!("Model '{}' not found in Ollama. Available: {:?}", model_name, model_list);
-            println!("❌ {}", error_msg);
             Err(error_msg)
         }
     }

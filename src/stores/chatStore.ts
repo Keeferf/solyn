@@ -79,7 +79,6 @@ export const useChatStore = create<ChatState>()(
           const sessions = await invoke<ChatSession[]>("get_chat_sessions");
           set({ sessions, isLoadingSessions: false });
         } catch (error) {
-          console.error("Failed to load sessions:", error);
           set({
             error: "Failed to load chat sessions",
             isLoadingSessions: false,
@@ -125,7 +124,6 @@ export const useChatStore = create<ChatState>()(
             });
           }
         } catch (error) {
-          console.error("Failed to load session:", error);
           set({
             error: "Failed to load chat session",
             isLoadingMessages: false,
@@ -156,7 +154,6 @@ export const useChatStore = create<ChatState>()(
 
           return sessionId;
         } catch (error) {
-          console.error("Failed to create session:", error);
           set({ error: "Failed to create chat session" });
           throw error;
         }
@@ -179,7 +176,6 @@ export const useChatStore = create<ChatState>()(
               currentSessionId === sessionId ? null : state.currentModelName,
           }));
         } catch (error) {
-          console.error("Failed to delete session:", error);
           set({ error: "Failed to delete chat session" });
           throw error;
         }
@@ -197,7 +193,6 @@ export const useChatStore = create<ChatState>()(
             ),
           }));
         } catch (error) {
-          console.error("Failed to update session title:", error);
           set({ error: "Failed to update session title" });
           throw error;
         }
@@ -228,7 +223,6 @@ export const useChatStore = create<ChatState>()(
 
           set({ error: null });
         } catch (error) {
-          console.error("Failed to add message:", error);
           // Rollback the message on error
           set((state) => ({
             currentMessages: state.currentMessages.filter((m) => m !== message),

@@ -59,11 +59,6 @@ export const useChat = (modelData: ChatModelData | undefined) => {
 
   const sendMessage = async (content: string) => {
     if (!content.trim() || isLoading || !modelData) {
-      console.log("Cannot send message:", {
-        hasContent: !!content.trim(),
-        isLoading,
-        hasModelData: !!modelData,
-      });
       return;
     }
 
@@ -82,7 +77,6 @@ export const useChat = (modelData: ChatModelData | undefined) => {
       return;
     }
 
-    console.log("Sending message with model:", modelData.ollama_model_name);
 
     setError(null);
     setStoreError(null);
@@ -100,7 +94,6 @@ export const useChat = (modelData: ChatModelData | undefined) => {
           modelData.ollama_model_name,
           title,
         );
-        console.log("Created new session with ID:", sessionId, "Title:", title);
       } catch (err) {
         const errorMsg = "Failed to create chat session";
         setError(errorMsg);
@@ -127,7 +120,6 @@ export const useChat = (modelData: ChatModelData | undefined) => {
         },
       });
     } catch (err) {
-      console.error("Failed to save user message:", err);
       // Don't block the flow if saving fails
     }
 
@@ -142,7 +134,6 @@ export const useChat = (modelData: ChatModelData | undefined) => {
         content: msg.content,
       }));
 
-      console.log("Sending chat history with", chatHistory.length, "messages");
 
       await invoke("send_chat_stream", {
         request: {
@@ -154,7 +145,6 @@ export const useChat = (modelData: ChatModelData | undefined) => {
 
       await loadSessions();
     } catch (err) {
-      console.error("Error sending message:", err);
       const errorMsg = err as string;
       setError(errorMsg);
       setStoreError(errorMsg);
@@ -188,32 +178,22 @@ export const useChat = (modelData: ChatModelData | undefined) => {
         unlistenRefs.current.forEach((unlisten) => {
           try {
             unlisten();
-          } catch (e) {
-            console.error("Error cleaning up listener:", e);
-          }
+          } catch {}
         });
         unlistenRefs.current = [];
 
-        console.log("Setting up chat event listeners...");
 
         // Listen for streaming chunks
         const unlistenChunk = await listen<{ chunk: string }>(
           "chat-stream-chunk",
           (event) => {
             const fullContent = event.payload.chunk;
-            console.log("Received chunk, length:", fullContent.length);
-            console.log(
-              "Chunk content preview:",
-              fullContent.substring(0, 100) + "...",
-            );
 
             // Get current messages from the store
             const currentMessages = useChatStore.getState().currentMessages;
             const updatedMessages = [...currentMessages];
             const lastIndex = updatedMessages.length - 1;
 
-            console.log("Current messages length:", currentMessages.length);
-            console.log("Last index:", lastIndex);
 
             if (
               lastIndex >= 0 &&
@@ -223,17 +203,8 @@ export const useChat = (modelData: ChatModelData | undefined) => {
                 ...updatedMessages[lastIndex],
                 content: fullContent,
               };
-              console.log(
-                "Updated assistant message, new length:",
-                fullContent.length,
-              );
               // Update the store
               useChatStore.getState().setCurrentMessages(updatedMessages);
-            } else {
-              console.warn(
-                "No assistant message found to update. Messages:",
-                currentMessages.map((m) => m.role),
-              );
             }
           },
         );
@@ -241,7 +212,6 @@ export const useChat = (modelData: ChatModelData | undefined) => {
 
         // Listen for stream completion
         const unlistenDone = await listen("chat-stream-done", () => {
-          console.log("Chat stream completed");
           setIsLoading(false);
           setStreaming(false);
         });
@@ -252,10 +222,6 @@ export const useChat = (modelData: ChatModelData | undefined) => {
           "chat-stream-complete",
           (event) => {
             const response = event.payload.response;
-            console.log(
-              "Chat stream complete with response length:",
-              response.length,
-            );
 
             // Ensure the final response is in the store
             const currentMessages = useChatStore.getState().currentMessages;
@@ -287,7 +253,6 @@ export const useChat = (modelData: ChatModelData | undefined) => {
           "chat-stream-error",
           (event) => {
             const { error: errorMsg } = event.payload;
-            console.error("Chat stream error:", errorMsg);
             setError(errorMsg);
             setStoreError(errorMsg);
             setIsLoading(false);
@@ -296,22 +261,16 @@ export const useChat = (modelData: ChatModelData | undefined) => {
         );
         unlistenRefs.current.push(unlistenError);
 
-        console.log("Chat event listeners set up successfully");
-      } catch (err) {
-        console.error("Failed to set up chat listeners:", err);
-      }
+      } catch {}
     };
 
     setupListeners();
 
     return () => {
-      console.log("Cleaning up chat event listeners...");
       unlistenRefs.current.forEach((unlisten) => {
         try {
           unlisten();
-        } catch (e) {
-          console.error("Error cleaning up listener:", e);
-        }
+        } catch {}
       });
       unlistenRefs.current = [];
     };

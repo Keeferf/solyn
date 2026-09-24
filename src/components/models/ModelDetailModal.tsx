@@ -65,7 +65,6 @@ export const ModelDetailModal = ({
         onCancelDownload(modelId, filename);
       }
     } catch (error) {
-      console.error("Failed to cancel download:", error);
       setCancellingFile(null);
     }
   };

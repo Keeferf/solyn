@@ -29,20 +29,15 @@ export const OllamaStatusChecker = ({ children }: OllamaStatusCheckerProps) => {
       !attemptingStart &&
       startAttemptCount.current < 3
     ) {
-      const attemptNumber = startAttemptCount.current + 1;
       setAttemptingStart(true);
       setStartError(null);
 
-      console.log(`Attempt ${attemptNumber}/3: Starting Ollama...`);
-
       startOllama()
         .then(() => {
-          console.log("Ollama started successfully");
           startAttemptCount.current = 0;
           setAttemptingStart(false);
         })
-        .catch((error) => {
-          console.error(`Attempt ${attemptNumber} failed:`, error);
+        .catch(() => {
           startAttemptCount.current += 1;
 
           const backoffMs = 500 * Math.pow(2, startAttemptCount.current - 1);

@@ -154,9 +154,7 @@ export const ModelInterface = () => {
             }, 3000);
           },
         );
-      } catch (err) {
-        console.error("Failed to setup download listeners:", err);
-      }
+      } catch {}
     };
 
     setupListeners();
@@ -184,7 +182,6 @@ export const ModelInterface = () => {
         filename,
       });
     } catch (error) {
-      console.error("Download failed:", error);
       if (error !== "Download cancelled") {
         setDownloadingModels((prev) => {
           const newSet = new Set(prev);
@@ -295,9 +292,7 @@ export const ModelInterface = () => {
           </>
         ) : (
           <InstalledModels
-            onModelClick={(model) => {
-              console.log("Clicked installed model:", model.model_id);
-            }}
+            onModelClick={() => {}}
           />
         )}
       </div>

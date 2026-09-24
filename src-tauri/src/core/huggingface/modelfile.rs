@@ -32,8 +32,6 @@ pub async fn write_modelfile(
     let filename = get_modelfile_name();
     let path = model_dir.join(filename);
 
-    println!("📝 Writing Modelfile: {:?}", path);
-    println!("📄 Modelfile content:\n{}", content);
 
     fs::write(&path, content)
         .await

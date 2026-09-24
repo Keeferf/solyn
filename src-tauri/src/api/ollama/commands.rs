@@ -59,7 +59,6 @@ pub async fn download_ollama(app_handle: tauri::AppHandle) -> Result<String, Str
 
 #[tauri::command]
 pub async fn update_ollama(app_handle: tauri::AppHandle) -> Result<String, String> {
-    println!("🔄 Starting Ollama update process...");
     
     let window = app_handle
         .get_webview_window("main")
@@ -75,11 +74,9 @@ pub async fn update_ollama(app_handle: tauri::AppHandle) -> Result<String, Strin
     );
 
     // Use the DEDICATED update function instead of installation
-    println!("📥 Executing Ollama update...");
     let update_result = execute_ollama_update(&app_handle, &window, &platform).await;
 
     if let Err(e) = update_result {
-        println!("❌ Update failed: {}", e);
         broadcast_download_progress(
             &window,
             DownloadStatus::Error,
@@ -90,7 +87,6 @@ pub async fn update_ollama(app_handle: tauri::AppHandle) -> Result<String, Strin
         return Err(e);
     }
 
-    println!("✅ Update completed successfully");
 
     // Wait a moment for the update to fully settle
     tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
@@ -107,7 +103,6 @@ pub async fn update_ollama(app_handle: tauri::AppHandle) -> Result<String, Strin
         None,
     );
 
-    println!("🎉 Ollama update completed successfully");
     Ok("Ollama updated successfully".to_string())
 }
 

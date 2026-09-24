@@ -152,12 +152,10 @@ pub async fn send_chat_stream(
     
     if !model_exists {
         let error_msg = format!("Model '{}' not found in Ollama. Please ensure the model is properly installed.", request.model);
-        println!("❌ {}", error_msg);
         let _ = window.emit("chat-stream-error", json!({ "error": error_msg }));
         return Err(error_msg);
     }
     
-    println!("✅ Sending chat with model: {}", request.model);
     
     let messages: Vec<ChatMessage> = request.messages
         .iter()
@@ -188,7 +186,6 @@ pub async fn send_chat_stream(
                     let _ = window.emit("chat-stream-chunk", json!({ "chunk": chunk }));
                 }
                 ChatEvent::Done(response) => {
-                    println!("✅ Chat stream completed for model: {}", request.model);
                     let _ = window.emit("chat-stream-done", json!({ "response": response }));
                     
                     // Emit complete event with full response
@@ -197,14 +194,11 @@ pub async fn send_chat_stream(
                     // Save to database if we have a session
                     if let Some(sid) = session_id_clone {
                         if let Ok(db) = get_db(&app_handle_clone).await {
-                            if let Err(e) = db.add_message(sid, "assistant", &full_response).await {
-                                println!("❌ Failed to save assistant message to database: {}", e);
-                            }
+                            let _ = db.add_message(sid, "assistant", &full_response).await;
                         }
                     }
                 }
                 ChatEvent::Error(error) => {
-                    println!("❌ Chat stream error: {}", error);
                     let _ = window.emit("chat-stream-error", json!({ "error": error }));
                 }
             }
@@ -216,9 +210,7 @@ pub async fn send_chat_stream(
         let db = get_db(&app_handle).await?;
         for msg in request.messages.iter() {
             if msg.role == "user" {
-                if let Err(e) = db.add_message(sid, "user", &msg.content).await {
-                    println!("❌ Failed to save user message to database: {}", e);
-                }
+                let _ = db.add_message(sid, "user", &msg.content).await;
             }
         }
     }

@@ -30,7 +30,6 @@ export const useChatHistory = () => {
         sessionId,
       });
     } catch (error) {
-      console.error(`Failed to load chat session ${sessionId}:`, error);
       throw error;
     }
   }, []);
@@ -43,7 +42,6 @@ export const useChatHistory = () => {
       );
       return true;
     } catch (error) {
-      console.error("Failed to rename chat:", error);
       throw error;
     }
   }, []);
@@ -54,14 +52,11 @@ export const useChatHistory = () => {
       setChats((prev) => prev.filter((chat) => chat.id !== sessionId));
       return true;
     } catch (error) {
-      console.error("Failed to delete chat:", error);
       throw error;
     }
   }, []);
 
-  const pinChat = useCallback(async (sessionId: number) => {
-    console.log(`Pinning chat ${sessionId}`);
-  }, []);
+  const pinChat = useCallback(async (_sessionId: number) => {}, []);
 
   useEffect(() => {
     loadChats();

@@ -32,9 +32,7 @@ export const CodeBlock = ({
       await navigator.clipboard.writeText(codeContent);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.warn("Failed to copy code:", err);
-    }
+    } catch {}
   };
 
   // If it's inline code
@@ -161,7 +159,6 @@ export const CodeBlock = ({
       </div>
     );
   } catch (error) {
-    console.warn(`Failed to highlight code for language: ${lang}`, error);
     return (
       <div
         className="shiki-wrapper"
