@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { FiMinus, FiMaximize, FiX } from "react-icons/fi";
+import { FiMinus, FiMaximize, FiMinimize, FiX } from "react-icons/fi";
 
 export const TitleBar = () => {
   const [isMaximized, setIsMaximized] = useState(false);
@@ -59,10 +59,10 @@ export const TitleBar = () => {
 
   return (
     <div
-      data-tauri-drag-region
+      data-tauri-drag-region="deep"
       className="fixed top-0 left-0 right-0 h-10 bg-black flex items-center justify-between px-3 z-50 select-none border-b border-white/5"
     >
-      <div className="flex items-center gap-2" data-tauri-drag-region>
+      <div className="flex items-center gap-2">
         <span className="font-anton text-lg tracking-wider bg-linear-to-r from-purple-accent to-white/80 bg-clip-text text-transparent">
           Solyn
         </span>
@@ -83,15 +83,20 @@ export const TitleBar = () => {
         <button
           onClick={handleMaximize}
           className="w-12 hover:bg-white/10 flex items-center justify-center transition-colors cursor-pointer"
-          aria-label="Maximize"
+          aria-label={isMaximized ? "Restore" : "Maximize"}
           type="button"
         >
-          <FiMaximize
-            className={`w-4 h-4 text-[#d8d4cf] hover:text-white transition-all ${
-              isMaximized ? "rotate-180" : ""
-            }`}
-            strokeWidth={1.5}
-          />
+          {isMaximized ? (
+            <FiMinimize
+              className="w-4 h-4 text-[#d8d4cf] hover:text-white transition-colors"
+              strokeWidth={1.5}
+            />
+          ) : (
+            <FiMaximize
+              className="w-4 h-4 text-[#d8d4cf] hover:text-white transition-colors"
+              strokeWidth={1.5}
+            />
+          )}
         </button>
         <button
           onClick={handleClose}

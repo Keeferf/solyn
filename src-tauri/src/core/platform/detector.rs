@@ -134,7 +134,7 @@ fn get_linux_distro() -> Result<String, String> {
     if let Ok(content) = fs::read_to_string("/etc/lsb-release") {
         for line in content.lines() {
             if line.starts_with("DISTRIB_DESCRIPTION=") {
-                let name = line.replace("DISTRIB_DESCRIPTION=")
+                let name = line.replace("DISTRIB_DESCRIPTION=", "")
                     .trim_matches('"')
                     .to_string();
                 return Ok(name);

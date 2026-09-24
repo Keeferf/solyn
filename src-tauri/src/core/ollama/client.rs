@@ -123,6 +123,22 @@ pub async fn is_ollama_installed() -> Result<bool, String> {
     
     #[cfg(not(target_os = "windows"))]
     {
+        use std::path::Path;
+
+        // GUI apps often inherit a minimal PATH (notably macOS launched from
+        // Finder, which can't see Homebrew), so check common install locations
+        // before falling back to `which`.
+        let common_paths = [
+            "/usr/local/bin/ollama",
+            "/usr/bin/ollama",
+            "/opt/homebrew/bin/ollama",
+            "/snap/bin/ollama",
+            "/var/lib/flatpak/exports/bin/ollama",
+        ];
+        if common_paths.iter().any(|p| Path::new(p).exists()) {
+            return Ok(true);
+        }
+
         match std::process::Command::new("which")
             .arg("ollama")
             .stdout(std::process::Stdio::null())
@@ -244,17 +260,40 @@ pub async fn start_ollama(_app_handle: &AppHandle) -> Result<String, String> {
     
     #[cfg(target_os = "linux")]
     {
-        let _ = std::process::Command::new("systemctl")
-            .args(&["--user", "start", "ollama.service"])
-            .output();
+        // The official installer registers a *system* service named `ollama`;
+        // some setups use a user service. Try both, then fall back to launching
+        // the server directly (WSL / containers without systemd).
+        for args in [
+            vec!["start", "ollama.service"],
+            vec!["--user", "start", "ollama.service"],
+        ] {
+            let _ = std::process::Command::new("systemctl")
+                .args(&args)
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .status();
+
+            for _ in 0..4 {
+                tokio::time::sleep(Duration::from_millis(500)).await;
+                if is_ollama_running().await? {
+                    return Ok("Ollama started successfully".to_string());
+                }
+            }
+        }
+
+        let _ = std::process::Command::new("ollama")
+            .arg("serve")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn();
+
         for _ in 0..8 {
             tokio::time::sleep(Duration::from_millis(500)).await;
-            
             if is_ollama_running().await? {
                 return Ok("Ollama started successfully".to_string());
             }
         }
-        
+
         Err("Ollama is starting but not ready yet".to_string())
     }
     

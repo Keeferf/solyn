@@ -1,31 +1,14 @@
 use tauri::{AppHandle, Manager};
 
 #[tauri::command]
-pub async fn open_path(_app_handle: AppHandle, path: String) -> Result<(), String> {
-    #[cfg(target_os = "windows")]
-    {
-        std::process::Command::new("explorer")
-            .arg(&path)
-            .spawn()
-            .map_err(|e| format!("Failed to open path: {}", e))?;
-    }
-    
-    #[cfg(target_os = "macos")]
-    {
-        std::process::Command::new("open")
-            .arg(&path)
-            .spawn()
-            .map_err(|e| format!("Failed to open path: {}", e))?;
-    }
-    
-    #[cfg(target_os = "linux")]
-    {
-        std::process::Command::new("xdg-open")
-            .arg(&path)
-            .spawn()
-            .map_err(|e| format!("Failed to open path: {}", e))?;
-    }
-    
+pub async fn open_path(app_handle: AppHandle, path: String) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+
+    app_handle
+        .opener()
+        .open_path(path.as_str(), None::<&str>)
+        .map_err(|e| format!("Failed to open path: {}", e))?;
+
     Ok(())
 }
 
@@ -67,7 +50,9 @@ pub async fn copy_to_clipboard(app_handle: AppHandle, text: String) -> Result<()
                 .stdin(std::process::Stdio::piped())
                 .spawn()
                 .and_then(|mut child| {
-                    let stdin = child.stdin.take().ok_or("Failed to get stdin")?;
+                    let mut stdin = child.stdin.take().ok_or_else(|| {
+                        std::io::Error::new(std::io::ErrorKind::Other, "Failed to get stdin")
+                    })?;
                     use std::io::Write;
                     stdin.write_all(text.as_bytes())?;
                     child.wait()?;
