@@ -223,15 +223,5 @@ pub async fn send_chat_stream(
         }
     });
     
-    // Save user messages to database
-    if let Some(sid) = session_id {
-        let db = get_db(&app_handle).await?;
-        for msg in request.messages.iter() {
-            if msg.role == "user" {
-                let _ = db.add_message(sid, "user", &msg.content, None).await;
-            }
-        }
-    }
-    
     Ok(())
 }
