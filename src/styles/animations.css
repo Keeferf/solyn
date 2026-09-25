@@ -37,17 +37,6 @@
   100% { background-position: 200% 0; }
 }
 
-@keyframes bounce {
-  0%, 80%, 100% { 
-    transform: scale(0);
-    opacity: 0.5;
-  }
-  40% { 
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
 /* ===== ANIMATION UTILITIES ===== */
 
 .animate-fadeIn {
@@ -66,10 +55,6 @@
   animation: pulse 2s ease-in-out infinite;
 }
 
-.animate-bounce {
-  animation: bounce 1.4s infinite ease-in-out both;
-}
-
 .shimmer {
   background: linear-gradient(
     90deg,
@@ -79,13 +64,4 @@
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
-}
-
-/* Optional: Add staggered animation delays for loading dots */
-.animate-bounce:nth-child(1) {
-  animation-delay: -0.32s;
-}
-
-.animate-bounce:nth-child(2) {
-  animation-delay: -0.16s;
 }

@@ -62,6 +62,7 @@ export const ChatInterface = () => {
     isLoading: isChatLoading,
     error: hookError,
     isOllamaReady,
+    modelLoaded,
     sendMessage,
     startNewChat,
   } = useChat(
@@ -270,8 +271,8 @@ export const ChatInterface = () => {
           <div className="flex-1">
             <ChatMessages
               messages={currentMessages}
-              isLoading={isChatLoading}
               isStreaming={storeIsStreaming}
+              modelLoaded={modelLoaded}
               error={combinedError}
               isOllamaReady={isOllamaReady}
             />

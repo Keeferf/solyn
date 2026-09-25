@@ -6,6 +6,7 @@ import { invoke } from "@tauri-apps/api/core";
 export interface ChatMessage {
   role: "user" | "assistant" | "system";
   content: string;
+  thinking?: string;
 }
 
 export interface ChatSession {
@@ -21,6 +22,7 @@ export interface StoredChatMessage {
   session_id: number;
   role: string;
   content: string;
+  thinking: string | null;
   created_at: string;
 }
 
@@ -99,6 +101,7 @@ export const useChatStore = create<ChatState>()(
             const messages: ChatMessage[] = result.messages.map((m) => ({
               role: m.role as "user" | "assistant" | "system",
               content: m.content,
+              thinking: m.thinking ?? undefined,
             }));
 
             // Update sessions list to ensure it's in sync

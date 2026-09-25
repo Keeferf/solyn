@@ -17,6 +17,16 @@ pub struct OllamaModelList {
     pub models: Vec<OllamaModel>,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct OllamaRunningModel {
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct OllamaPsList {
+    pub models: Vec<OllamaRunningModel>,
+}
+
 /// Client for Ollama model management
 pub struct OllamaModelClient {
     client: reqwest::Client,
@@ -169,6 +179,32 @@ impl OllamaModelClient {
     pub async fn model_exists(&self, model_name: &str) -> Result<bool, String> {
         let models = self.list_models().await?;
         Ok(models.iter().any(|m| m == model_name))
+    }
+
+    /// Check if a model is currently loaded in memory (warm).
+    /// Uses `/api/ps`, which lists running models.
+    pub async fn is_model_loaded(&self, model_name: &str) -> Result<bool, String> {
+        let url = format!("{}/api/ps", self.base_url);
+
+        let response = self.client
+            .get(&url)
+            .timeout(Duration::from_secs(5))
+            .send()
+            .await
+            .map_err(|e| format!("Failed to list running models: {}", e))?;
+
+        if !response.status().is_success() {
+            return Ok(false);
+        }
+
+        let data: OllamaPsList = response.json()
+            .await
+            .map_err(|e| format!("Failed to parse /api/ps: {}", e))?;
+
+        let base = |n: &str| n.split(':').next().unwrap_or(n).to_string();
+        Ok(data.models.iter().any(|m| {
+            m.name == model_name || base(&m.name) == base(model_name)
+        }))
     }
 
     /// Check Ollama health/version

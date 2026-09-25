@@ -92,7 +92,8 @@ pub async fn add_message_to_session(
     let msg_id = db.add_message(
         session_id,
         &message.role,
-        &message.content
+        &message.content,
+        None,
     ).await?;
     Ok(msg_id)
 }
@@ -109,6 +110,7 @@ pub async fn send_chat_message(
         ChatMessage {
             role: "user".to_string(),
             content: request.message.clone(),
+            thinking: None,
         }
     ];
     
@@ -126,9 +128,9 @@ pub async fn send_chat_message(
     if let Some(session_id) = request.session_id {
         let db = get_db(&app_handle).await?;
         // Save user message
-        db.add_message(session_id, "user", &request.message).await?;
+        db.add_message(session_id, "user", &request.message, None).await?;
         // Save assistant response
-        db.add_message(session_id, "assistant", &response.message.content).await?;
+        db.add_message(session_id, "assistant", &response.message.content, response.message.thinking.as_deref()).await?;
     }
     
     Ok(response.message.content)
@@ -155,13 +157,22 @@ pub async fn send_chat_stream(
         let _ = window.emit("chat-stream-error", json!({ "error": error_msg }));
         return Err(error_msg);
     }
-    
+
+    // Tell the UI whether this is a cold load (model not in memory) so it can
+    // show "Loading model" instead of "Thinking" while waiting for first token.
+    let model_loaded = model_client
+        .is_model_loaded(&request.model)
+        .await
+        .unwrap_or(false);
+    let _ = window.emit("chat-stream-model-status", json!({ "loaded": model_loaded }));
+
     
     let messages: Vec<ChatMessage> = request.messages
         .iter()
         .map(|m| ChatMessage {
             role: m.role.clone(),
             content: m.content.clone(),
+            thinking: None,
         })
         .collect();
     
@@ -177,24 +188,31 @@ pub async fn send_chat_stream(
     // Process streaming responses and emit events to frontend
     tokio::spawn(async move {
         let mut full_response = String::new();
+        let mut full_thinking = String::new();
         
         while let Some(event) = receiver.recv().await {
             match event {
                 ChatEvent::MessageChunk(chunk) => {
-                    // We now only get one chunk with the full response
+                    // Chunks carry the accumulated content so far
                     full_response = chunk.clone();
                     let _ = window.emit("chat-stream-chunk", json!({ "chunk": chunk }));
+                }
+                ChatEvent::ThinkingChunk(thinking) => {
+                    // Chunks carry the accumulated reasoning so far
+                    full_thinking = thinking.clone();
+                    let _ = window.emit("chat-stream-thinking", json!({ "chunk": thinking }));
                 }
                 ChatEvent::Done(response) => {
                     let _ = window.emit("chat-stream-done", json!({ "response": response }));
                     
                     // Emit complete event with full response
-                    let _ = window.emit("chat-stream-complete", json!({ "response": full_response }));
+                    let _ = window.emit("chat-stream-complete", json!({ "response": full_response, "thinking": full_thinking }));
                     
                     // Save to database if we have a session
                     if let Some(sid) = session_id_clone {
                         if let Ok(db) = get_db(&app_handle_clone).await {
-                            let _ = db.add_message(sid, "assistant", &full_response).await;
+                            let thinking = if full_thinking.is_empty() { None } else { Some(full_thinking.as_str()) };
+                            let _ = db.add_message(sid, "assistant", &full_response, thinking).await;
                         }
                     }
                 }
@@ -210,7 +228,7 @@ pub async fn send_chat_stream(
         let db = get_db(&app_handle).await?;
         for msg in request.messages.iter() {
             if msg.role == "user" {
-                let _ = db.add_message(sid, "user", &msg.content).await;
+                let _ = db.add_message(sid, "user", &msg.content, None).await;
             }
         }
     }

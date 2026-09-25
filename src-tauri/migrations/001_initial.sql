@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     session_id INTEGER NOT NULL,
     role TEXT NOT NULL, -- 'user' or 'assistant'
     content TEXT NOT NULL,
+    thinking TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
 );
