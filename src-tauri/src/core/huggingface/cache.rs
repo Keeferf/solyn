@@ -87,3 +87,55 @@ pub fn remove_cancellation_token(download_id: &str) -> Option<Arc<AtomicBool>> {
 pub fn clear_model_cache(filter: Option<ModelFilter>) {
     Cache::clear_gguf_cache(filter);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::atomic::Ordering;
+
+    #[test]
+    fn download_id_is_model_and_filename() {
+        assert_eq!(
+            generate_download_id("author/repo", "m.gguf"),
+            "author/repo:m.gguf"
+        );
+    }
+
+    #[test]
+    fn cancellation_token_lifecycle() {
+        let id = "test-cancel-lifecycle-id".to_string();
+        remove_cancellation_token(&id);
+        assert!(get_cancellation_token(&id).is_none());
+
+        let token = Arc::new(AtomicBool::new(false));
+        insert_cancellation_token(id.clone(), token.clone());
+
+        assert!(!get_cancellation_token(&id).unwrap().load(Ordering::SeqCst));
+        token.store(true, Ordering::SeqCst);
+        assert!(get_cancellation_token(&id).unwrap().load(Ordering::SeqCst));
+
+        assert!(remove_cancellation_token(&id).is_some());
+        assert!(get_cancellation_token(&id).is_none());
+    }
+
+    #[test]
+    fn model_details_cache_roundtrip() {
+        let key = "author/unique-cache-roundtrip";
+        let details = HFModelDetails {
+            id: key.to_string(),
+            model_id: key.to_string(),
+            author: "author".to_string(),
+            name: "unique-cache-roundtrip".to_string(),
+            downloads: Some(1),
+            likes: Some(2),
+            description: None,
+            gguf_files: vec![],
+        };
+
+        assert!(Cache::get_model_details(key).is_none());
+        Cache::set_model_details(key, details);
+        let got = Cache::get_model_details(key).unwrap();
+        assert_eq!(got.model_id, key);
+        assert_eq!(got.likes, Some(2));
+    }
+}

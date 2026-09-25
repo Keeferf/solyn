@@ -48,3 +48,6 @@ tauri-plugin-shell = "2.3.6"
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
+
+[dev-dependencies]
+tempfile = "3"

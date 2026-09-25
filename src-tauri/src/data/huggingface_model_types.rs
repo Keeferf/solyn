@@ -82,3 +82,27 @@ pub struct SearchModelsResponse {
     pub total: usize,
     pub has_more: bool,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_filter_is_most_downloads() {
+        assert_eq!(ModelFilter::default(), ModelFilter::MostDownloads);
+    }
+
+    #[test]
+    fn filter_sort_keys() {
+        assert_eq!(ModelFilter::MostDownloads.as_str(), "downloads");
+        assert_eq!(ModelFilter::MostLiked.as_str(), "likes");
+        assert_eq!(ModelFilter::Recent.as_str(), "lastModified");
+    }
+
+    #[test]
+    fn filter_display_names() {
+        assert_eq!(ModelFilter::MostDownloads.display_name(), "Most Downloads");
+        assert_eq!(ModelFilter::MostLiked.display_name(), "Most Liked");
+        assert_eq!(ModelFilter::Recent.display_name(), "Recent");
+    }
+}

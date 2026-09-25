@@ -55,3 +55,7 @@ jobs:
       - name: Cargo check (dev)
         working-directory: src-tauri
         run: cargo check --no-default-features
+
+      - name: Cargo test
+        working-directory: src-tauri
+        run: cargo test
