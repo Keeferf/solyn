@@ -3909,7 +3909,7 @@ dependencies = [
 
 [[package]]
 name = "solyn"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "arboard",
  "base64 0.23.1",
@@ -3929,6 +3929,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-opener",
  "tauri-plugin-shell",
+ "tempfile",
  "tokio",
  "tokio-stream",
  "tokio-util",

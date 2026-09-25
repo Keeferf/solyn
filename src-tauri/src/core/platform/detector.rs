@@ -245,3 +245,39 @@ pub fn get_user_shell() -> String {
         env::var("SHELL").unwrap_or_else(|_| "unknown".to_string())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn os_flags_are_consistent() {
+        let os = detect_operating_system();
+        assert_eq!(os == "windows", is_windows());
+        assert_eq!(os == "linux", is_linux());
+        assert!(matches!(os.as_str(), "windows" | "linux" | "unknown"));
+    }
+
+    #[test]
+    fn family_matches_os() {
+        let family = get_platform_family();
+        if is_windows() {
+            assert_eq!(family, "windows");
+        } else if is_linux() {
+            assert_eq!(family, "unix");
+        }
+    }
+
+    #[test]
+    fn platform_info_exposes_expected_fields() {
+        let info = get_platform_info_detailed();
+        assert!(info.os().is_some());
+        assert_eq!(
+            info.family().unwrap().to_string(),
+            get_platform_family()
+        );
+        assert!(info.architecture().is_some());
+        assert!(info.display_name().is_some());
+        assert!(info.icon().is_some());
+    }
+}

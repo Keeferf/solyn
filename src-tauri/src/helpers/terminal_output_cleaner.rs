@@ -121,3 +121,47 @@ pub fn broadcast_terminal_line(window: &WebviewWindow, line: &str, stream_type: 
         is_progress,
     });
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn strips_shell_prompts() {
+        assert_eq!(sanitize_output_line("> hello"), "hello");
+        assert_eq!(sanitize_output_line(">>> hello"), "hello");
+        assert_eq!(sanitize_output_line(">> hello"), "hello");
+        assert_eq!(sanitize_output_line("$ ls"), "ls");
+        assert_eq!(sanitize_output_line("# root"), "root");
+        assert_eq!(sanitize_output_line("VERBOSE: msg"), "msg");
+    }
+
+    #[test]
+    fn drops_noise_and_empty_lines() {
+        assert_eq!(sanitize_output_line("   "), "");
+        assert_eq!(sanitize_output_line(">"), "");
+        assert_eq!(sanitize_output_line("Install complete."), "");
+        assert_eq!(
+            sanitize_output_line("Install complete. Run 'ollama' from the command line."),
+            ""
+        );
+        assert_eq!(sanitize_output_line("GET with some payload here"), "");
+        assert_eq!(
+            sanitize_output_line("received a response of content type json"),
+            ""
+        );
+    }
+
+    #[test]
+    fn keeps_meaningful_lines() {
+        assert_eq!(sanitize_output_line("Downloading model"), "Downloading model");
+    }
+
+    #[test]
+    fn removes_ansi_escape_codes() {
+        assert_eq!(remove_ansi_escape_codes("\x1b[31mred\x1b[0m"), "red");
+        assert_eq!(remove_ansi_escape_codes("\x1b[2Khello"), "hello");
+        assert_eq!(remove_ansi_escape_codes("plain"), "plain");
+        assert_eq!(remove_ansi_escape_codes("a\x1b[0mb"), "ab");
+    }
+}

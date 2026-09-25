@@ -9,6 +9,7 @@ use crate::core::huggingface::{
     search_hugging_face_models,
     get_search_model_count,
     get_installed_models,
+    ollama_model_name,
     fetch_model_details as client_fetch_model_details,
 };
 use crate::core::ollama::models::OllamaModelClient;
@@ -108,20 +109,16 @@ pub async fn get_chat_models(
     
     for model in installed {
         for file in &model.files {
-            // Extract quantization from filename if not already available
-            let quantization = file.quantization.clone().or_else(|| {
-                file.filename
-                    .split('_')
-                    .find(|part| part.starts_with('Q') || part.starts_with("IQ") || part.starts_with("F"))
-                    .map(|s| s.to_string())
-            }).unwrap_or_else(|| "default".to_string());
+            // Quantization is set by the installed-model scanner; fall back to
+            // "default" and let the canonical helper decide on the suffix.
+            let quantization = file
+                .quantization
+                .clone()
+                .unwrap_or_else(|| "default".to_string());
             
-            // Generate the base Ollama model name (without :latest)
-            let base_ollama_name = if quantization != "default" {
-                format!("{}_{}", model.model_id.replace("/", "_"), quantization)
-            } else {
-                model.model_id.replace("/", "_")
-            };
+            // Base Ollama model name (without :latest), identical to the name
+            // created during download.
+            let base_ollama_name = ollama_model_name(&model.model_id, Some(&quantization));
             
             // Check if this model exists in Ollama (check both with and without :latest)
             let is_registered = ollama_models.iter().any(|m| {

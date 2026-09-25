@@ -214,3 +214,84 @@ pub async fn combine_chunks(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn model_paths(dir: &std::path::Path, filename: &str) -> ModelPaths {
+        ModelPaths {
+            model_dir: dir.to_path_buf(),
+            file_path: dir.join(filename),
+            part_path: dir.join(format!("{}.part", filename)),
+        }
+    }
+
+    #[tokio::test]
+    async fn totals_downloaded_chunk_sizes() {
+        let dir = tempfile::tempdir().unwrap();
+        let paths = model_paths(dir.path(), "m.gguf");
+        tokio::fs::write(paths.chunk_path("m.gguf", 0), vec![0u8; 10]).await.unwrap();
+        tokio::fs::write(paths.chunk_path("m.gguf", 1), vec![0u8; 5]).await.unwrap();
+
+        assert_eq!(get_total_downloaded_size(&paths, "m.gguf", 3).await, 15);
+    }
+
+    #[tokio::test]
+    async fn all_chunks_complete_when_sizes_match() {
+        let dir = tempfile::tempdir().unwrap();
+        let paths = model_paths(dir.path(), "m.gguf");
+        tokio::fs::write(paths.chunk_path("m.gguf", 0), vec![0u8; 10]).await.unwrap();
+        tokio::fs::write(paths.chunk_path("m.gguf", 1), vec![0u8; 10]).await.unwrap();
+
+        assert!(are_all_chunks_complete(&paths, "m.gguf", 2, 20).await);
+    }
+
+    #[tokio::test]
+    async fn all_chunks_incomplete_when_a_chunk_is_short() {
+        let dir = tempfile::tempdir().unwrap();
+        let paths = model_paths(dir.path(), "m.gguf");
+        tokio::fs::write(paths.chunk_path("m.gguf", 0), vec![0u8; 10]).await.unwrap();
+        tokio::fs::write(paths.chunk_path("m.gguf", 1), vec![0u8; 9]).await.unwrap();
+
+        assert!(!are_all_chunks_complete(&paths, "m.gguf", 2, 20).await);
+    }
+
+    #[tokio::test]
+    async fn last_chunk_expected_size_includes_remainder() {
+        let dir = tempfile::tempdir().unwrap();
+        let paths = model_paths(dir.path(), "m.gguf");
+        // total 25 / 2 chunks -> chunk_size 12, remainder 1 -> last chunk 13.
+        tokio::fs::write(paths.chunk_path("m.gguf", 0), vec![0u8; 12]).await.unwrap();
+        tokio::fs::write(paths.chunk_path("m.gguf", 1), vec![0u8; 13]).await.unwrap();
+
+        assert!(are_all_chunks_complete(&paths, "m.gguf", 2, 25).await);
+
+        tokio::fs::write(paths.chunk_path("m.gguf", 1), vec![0u8; 12]).await.unwrap();
+        assert!(!are_all_chunks_complete(&paths, "m.gguf", 2, 25).await);
+    }
+
+    #[tokio::test]
+    async fn missing_chunk_is_incomplete() {
+        let dir = tempfile::tempdir().unwrap();
+        let paths = model_paths(dir.path(), "m.gguf");
+        tokio::fs::write(paths.chunk_path("m.gguf", 0), vec![0u8; 10]).await.unwrap();
+
+        assert!(!are_all_chunks_complete(&paths, "m.gguf", 2, 20).await);
+    }
+
+    #[tokio::test]
+    async fn combine_chunks_reassembles_in_order() {
+        let dir = tempfile::tempdir().unwrap();
+        let paths = model_paths(dir.path(), "m.gguf");
+        tokio::fs::write(paths.chunk_path("m.gguf", 0), [1u8, 2, 3]).await.unwrap();
+        tokio::fs::write(paths.chunk_path("m.gguf", 1), [4u8, 5]).await.unwrap();
+
+        combine_chunks(&paths, "m.gguf", 2).await.unwrap();
+
+        assert_eq!(
+            tokio::fs::read(&paths.file_path).await.unwrap(),
+            vec![1, 2, 3, 4, 5]
+        );
+    }
+}

@@ -1,6 +1,6 @@
 [package]
 name = "solyn"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 
 [lib]
@@ -48,3 +48,6 @@ tauri-plugin-shell = "2.3.6"
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
+
+[dev-dependencies]
+tempfile = "3"

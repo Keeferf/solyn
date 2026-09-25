@@ -442,3 +442,69 @@ pub async fn fetch_model_details(model_id: &str) -> Result<HFModelDetails, Strin
     Cache::set_model_details(model_id, model.clone());
     Ok(model)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn parses_gguf_model_summary() {
+        let item = json!({
+            "id": "author/repo",
+            "downloads": 10,
+            "likes": 3,
+            "created_at": "2024-01-01",
+            "siblings": [{"rfilename": "model.gguf"}],
+        });
+        let model = parse_model_summary(&item).unwrap();
+        assert_eq!(model.id, "author/repo");
+        assert_eq!(model.model_id, "author/repo");
+        assert_eq!(model.author, "author");
+        assert_eq!(model.name, "repo");
+        assert_eq!(model.downloads, Some(10));
+        assert_eq!(model.likes, Some(3));
+        assert_eq!(model.last_modified.as_deref(), Some("2024-01-01"));
+    }
+
+    #[test]
+    fn skips_model_without_gguf_siblings() {
+        let item = json!({"id": "author/repo", "siblings": [{"rfilename": "README.md"}]});
+        assert!(parse_model_summary(&item).is_none());
+    }
+
+    #[test]
+    fn keeps_model_with_no_siblings() {
+        let item = json!({"id": "author/repo"});
+        assert!(parse_model_summary(&item).is_some());
+    }
+
+    #[test]
+    fn skips_empty_id() {
+        let item = json!({"id": "", "siblings": [{"rfilename": "m.gguf"}]});
+        assert!(parse_model_summary(&item).is_none());
+    }
+
+    #[test]
+    fn last_modified_falls_back_to_created_at() {
+        let item = json!({
+            "id": "a/b",
+            "created_at": "2024-02-02",
+            "siblings": [{"rfilename": "m.gguf"}],
+        });
+        let model = parse_model_summary(&item).unwrap();
+        assert_eq!(model.last_modified.as_deref(), Some("2024-02-02"));
+    }
+
+    #[test]
+    fn last_modified_prefers_explicit_value() {
+        let item = json!({
+            "id": "a/b",
+            "created_at": "2024-02-02",
+            "last_modified": "2024-03-03",
+            "siblings": [{"rfilename": "m.gguf"}],
+        });
+        let model = parse_model_summary(&item).unwrap();
+        assert_eq!(model.last_modified.as_deref(), Some("2024-03-03"));
+    }
+}
