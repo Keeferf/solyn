@@ -1,4 +1,4 @@
-import { FiTerminal, FiChevronDown, FiChevronUp } from "react-icons/fi";
+import { Terminal, ChevronDown, ChevronUp } from "lucide-react";
 import { TerminalOutput } from "./hooks/useOllamaInstallation";
 import {
   shouldShowLine,
@@ -30,7 +30,7 @@ export const TerminalDisplay = ({
         onClick={onToggleExpand}
       >
         <div className="flex items-center gap-2">
-          <FiTerminal className="text-white/60" size={18} />
+          <Terminal className="text-white/60" size={18} />
         </div>
         <button
           className="text-white/30 hover:text-white/60 transition-colors cursor-pointer"
@@ -40,9 +40,9 @@ export const TerminalDisplay = ({
           }}
         >
           {isTerminalExpanded ? (
-            <FiChevronUp size={18} />
+            <ChevronUp size={18} />
           ) : (
-            <FiChevronDown size={18} />
+            <ChevronDown size={18} />
           )}
         </button>
       </div>

@@ -1,6 +1,6 @@
 // src/components/history/ChatItem.tsx
 import { useState, useRef } from "react";
-import { FiCheck } from "react-icons/fi";
+import { Check } from "lucide-react";
 import type { ChatSession } from "./types";
 import { ChatDate } from "./ChatDate";
 import { DropdownMenu } from "./DropdownMenu";
@@ -92,7 +92,7 @@ export const ChatItem = ({
                   : "transparent",
               }}
             >
-              {isSelected && <FiCheck className="w-3 h-3 text-white" />}
+              {isSelected && <Check className="w-3 h-3 text-white" />}
             </div>
           )}
           <div className="flex-1 min-w-0">

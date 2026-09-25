@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { FiDownload, FiExternalLink, FiXCircle } from "react-icons/fi";
+import { Download, ExternalLink, CircleX } from "lucide-react";
 import { TerminalDisplay } from "./models/TerminalDisplay";
 import { useOllamaInstallation } from "./models/hooks/useOllamaInstallation";
 
@@ -89,7 +89,7 @@ export const OllamaDownloadPage = ({
       {isError && (
         <div className="mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-center shrink-0">
           <div className="flex items-center justify-center gap-2 mb-1">
-            <FiXCircle size={18} />
+            <CircleX size={18} />
             <p className="font-medium">Installation failed</p>
           </div>
           <p className="text-sm text-red-400/60">
@@ -114,7 +114,7 @@ export const OllamaDownloadPage = ({
             onClick={handleDownloadOllama}
             className="px-8 py-3 bg-purple-accent hover:bg-purple-accent/80 text-white rounded-xl font-medium transition-all flex items-center gap-2 cursor-pointer"
           >
-            <FiDownload size={18} />
+            <Download size={18} />
             Retry Installation
           </button>
           <a
@@ -124,7 +124,7 @@ export const OllamaDownloadPage = ({
             className="text-purple-accent hover:underline inline-flex items-center gap-1 text-sm"
           >
             Manual Download
-            <FiExternalLink size={14} />
+            <ExternalLink size={14} />
           </a>
         </div>
       )}

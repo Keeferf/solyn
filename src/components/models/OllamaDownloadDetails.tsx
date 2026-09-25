@@ -1,4 +1,4 @@
-import { FiDownload, FiExternalLink } from "react-icons/fi";
+import { Download, ExternalLink } from "lucide-react";
 
 interface InstallInfo {
   platform: string;
@@ -52,7 +52,7 @@ export const DownloadDetails = ({
         disabled={isDownloading}
         className="px-8 py-3 bg-purple-accent hover:bg-purple-accent/80 disabled:opacity-50 text-white rounded-xl font-medium transition-all flex items-center justify-center gap-2 mx-auto cursor-pointer"
       >
-        <FiDownload size={18} />
+        <Download size={18} />
         {isOllamaInstalled
           ? "Reinstall Ollama"
           : `Download Ollama for ${platformDisplay}`}
@@ -67,7 +67,7 @@ export const DownloadDetails = ({
           className="text-purple-accent hover:underline inline-flex items-center gap-1"
         >
           ollama.com/download
-          <FiExternalLink size={12} />
+          <ExternalLink size={12} />
         </a>
       </div>
     </div>

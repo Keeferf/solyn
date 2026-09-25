@@ -1,4 +1,4 @@
-import { FiX } from "react-icons/fi";
+import { X } from "lucide-react";
 
 export const ModalHeader = ({
   title,
@@ -13,7 +13,7 @@ export const ModalHeader = ({
       onClick={onClose}
       className="p-2 hover:bg-white/10 rounded-lg transition-all text-white/60 hover:text-white cursor-pointer"
     >
-      <FiX size={20} />
+      <X size={20} />
     </button>
   </div>
 );

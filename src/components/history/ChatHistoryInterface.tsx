@@ -1,13 +1,13 @@
 // src/components/history/ChatHistoryInterface.tsx
 import { useState, useEffect } from "react";
 import {
-  FiSearch,
-  FiMessageSquare,
-  FiCheckSquare,
-  FiSquare,
-  FiTrash2,
-  FiX,
-} from "react-icons/fi";
+  Search,
+  MessageSquare,
+  SquareCheck,
+  Square,
+  Trash,
+  X,
+} from "lucide-react";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import { RenameModal } from "@/components/ui/RenameModal";
 import { ChatItem } from "./ChatItem";
@@ -230,7 +230,7 @@ export const ChatHistoryInterface = ({
                 onClick={enterSelectionMode}
                 className="px-3 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors flex items-center gap-2 text-sm cursor-pointer"
               >
-                <FiCheckSquare className="w-4 h-4" />
+                <SquareCheck className="w-4 h-4" />
                 Select
               </button>
             ) : (
@@ -246,9 +246,9 @@ export const ChatHistoryInterface = ({
                     {filteredChats.every((chat) =>
                       selectedChats.has(chat.id),
                     ) ? (
-                      <FiCheckSquare className="w-4 h-4" />
+                      <SquareCheck className="w-4 h-4" />
                     ) : (
-                      <FiSquare className="w-4 h-4" />
+                      <Square className="w-4 h-4" />
                     )}
                     Select All
                   </button>
@@ -263,7 +263,7 @@ export const ChatHistoryInterface = ({
                       : "bg-white/5 text-white/30 cursor-not-allowed"
                   }`}
                 >
-                  <FiTrash2 className="w-4 h-4" />
+                  <Trash className="w-4 h-4" />
                   Delete Selected
                 </button>
 
@@ -271,7 +271,7 @@ export const ChatHistoryInterface = ({
                   onClick={exitSelectionMode}
                   className="px-3 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors flex items-center gap-2 text-sm cursor-pointer"
                 >
-                  <FiX className="w-4 h-4" />
+                  <X className="w-4 h-4" />
                   Cancel
                 </button>
               </>
@@ -281,7 +281,7 @@ export const ChatHistoryInterface = ({
 
         <div className="pb-4">
           <div className="relative">
-            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" />
             <input
               type="text"
               placeholder="Search conversations..."
@@ -294,7 +294,7 @@ export const ChatHistoryInterface = ({
 
         {filteredChats.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-white/40 px-4">
-            <FiMessageSquare className="w-12 h-12 mb-4 opacity-30" />
+            <MessageSquare className="w-12 h-12 mb-4 opacity-30" />
             <p className="text-lg font-medium">No conversations found</p>
             <p className="text-sm">
               {searchTerm

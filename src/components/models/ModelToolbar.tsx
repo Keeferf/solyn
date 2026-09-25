@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import {
-  FiSearch,
-  FiX,
-  FiDownloadCloud,
-  FiThumbsUp,
-  FiClock,
-} from "react-icons/fi";
+  Search,
+  X,
+  CloudDownload,
+  ThumbsUp,
+  Clock,
+} from "lucide-react";
 import { useMaintainFocus } from "./hooks/useMaintainFocus";
 
 interface ModelToolbarProps {
@@ -25,9 +25,9 @@ interface ModelToolbarProps {
 }
 
 const defaultFilterOptions = [
-  { value: "most_downloads", label: "Most Downloads", icon: FiDownloadCloud },
-  { value: "most_liked", label: "Most Liked", icon: FiThumbsUp },
-  { value: "recent", label: "Recent", icon: FiClock },
+  { value: "most_downloads", label: "Most Downloads", icon: CloudDownload },
+  { value: "most_liked", label: "Most Liked", icon: ThumbsUp },
+  { value: "recent", label: "Recent", icon: Clock },
 ];
 
 const MIN_SEARCH_CHARS = 3;
@@ -143,7 +143,7 @@ export const ModelToolbar = ({
     <div className="flex flex-col sm:flex-row gap-3">
       <div className="relative flex-1">
         <div className="relative">
-          <FiSearch
+          <Search
             className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30"
             size={16}
           />
@@ -162,7 +162,7 @@ export const ModelToolbar = ({
               className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors cursor-pointer"
               aria-label="Clear search"
             >
-              <FiX size={16} />
+              <X size={16} />
             </button>
           )}
         </div>

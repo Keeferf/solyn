@@ -1,4 +1,4 @@
-import { FiCpu } from "react-icons/fi";
+import { Cpu } from "lucide-react";
 import { GGUFFile } from "../hooks/useHuggingFaceModels";
 import {
   formatFileSize,
@@ -44,7 +44,7 @@ export const QuantizationCard = ({
           </p>
           {paramCount && (
             <div className="flex items-center gap-1 mt-1 text-emerald-400 text-xs">
-              <FiCpu size={12} />
+              <Cpu size={12} />
               <span>{formatParameterCount(paramCount)}</span>
             </div>
           )}

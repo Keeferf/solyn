@@ -2,7 +2,7 @@ import { SidebarItem } from "./SidebarItem";
 import { NAVIGATION_ITEMS, FOOTER_ITEMS } from "./SidebarNavigation";
 import { OllamaVersionIndicator } from "./OllamaVersionIndicator";
 import { ThemeSwitcher } from "./ThemeSwitcher";
-import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useChatStore } from "@/stores/chatStore";
 
 interface SidebarProps {
@@ -65,9 +65,9 @@ export const Sidebar = ({
           title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {isCollapsed ? (
-            <FiChevronRight size={20} />
+            <ChevronRight size={20} />
           ) : (
-            <FiChevronLeft size={20} />
+            <ChevronLeft size={20} />
           )}
         </button>
       </div>
@@ -103,7 +103,7 @@ export const Sidebar = ({
       {!isCollapsed && (
         <div className="mt-auto pt-4 border-t border-white/10">
           <div className="flex items-center justify-between px-3 py-2">
-            <span className="text-sm text-white/40">v0.1.0</span>
+            <span className="text-sm text-white/40">v0.2.0</span>
             <OllamaVersionIndicator />
           </div>
         </div>

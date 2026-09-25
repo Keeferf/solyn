@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { FiRefreshCw, FiAlertCircle, FiCheckCircle } from "react-icons/fi";
+import { RefreshCw, CircleAlert, CircleCheck } from "lucide-react";
 import { useOllama } from "@/contexts/OllamaContext";
 
 interface OllamaStatus {
@@ -161,7 +161,7 @@ export const OllamaVersionIndicator = () => {
     if (updateSuccess) {
       return (
         <div className="flex items-center gap-1.5 px-2 py-1 bg-green-500/10 border border-green-500/20 rounded-lg text-xs">
-          <FiCheckCircle className="w-3 h-3 text-green-500 shrink-0" />
+          <CircleCheck className="w-3 h-3 text-green-500 shrink-0" />
           <span className="font-medium text-green-500">Updated!</span>
         </div>
       );
@@ -175,7 +175,7 @@ export const OllamaVersionIndicator = () => {
         className="flex items-center gap-1.5 px-2 py-1 bg-red-500/10 border border-red-500/20 rounded-lg text-xs max-w-48"
         title={updateError}
       >
-        <FiAlertCircle className="w-3 h-3 text-red-500 shrink-0" />
+        <CircleAlert className="w-3 h-3 text-red-500 shrink-0" />
         <span className="font-medium text-red-500 truncate">{updateError}</span>
       </div>
     );
@@ -191,14 +191,14 @@ export const OllamaVersionIndicator = () => {
     >
       {updating ? (
         <>
-          <FiRefreshCw className="w-3 h-3 text-green-500 animate-spin shrink-0" />
+          <RefreshCw className="w-3 h-3 text-green-500 animate-spin shrink-0" />
           <span className="font-medium text-green-500">
             {progress > 0 ? `${Math.round(progress)}%` : "Updating..."}
           </span>
         </>
       ) : (
         <>
-          <FiAlertCircle className="w-3 h-3 text-green-500 shrink-0" />
+          <CircleAlert className="w-3 h-3 text-green-500 shrink-0" />
           <span className="font-medium text-green-500 whitespace-nowrap">
             Update to {latestVersion}
           </span>

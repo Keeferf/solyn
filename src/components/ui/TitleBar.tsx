@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { FiMinus, FiMaximize, FiMinimize, FiX } from "react-icons/fi";
+import { Minus, Square, Copy, X } from "lucide-react";
 
 export const TitleBar = () => {
   const [isMaximized, setIsMaximized] = useState(false);
@@ -65,7 +65,7 @@ export const TitleBar = () => {
           aria-label="Minimize to tray"
           type="button"
         >
-          <FiMinus
+          <Minus
             className="w-4 h-4 text-[#d8d4cf] hover:text-white transition-colors"
             strokeWidth={1.5}
           />
@@ -77,12 +77,12 @@ export const TitleBar = () => {
           type="button"
         >
           {isMaximized ? (
-            <FiMinimize
+            <Copy
               className="w-4 h-4 text-[#d8d4cf] hover:text-white transition-colors"
               strokeWidth={1.5}
             />
           ) : (
-            <FiMaximize
+            <Square
               className="w-4 h-4 text-[#d8d4cf] hover:text-white transition-colors"
               strokeWidth={1.5}
             />
@@ -94,7 +94,7 @@ export const TitleBar = () => {
           aria-label="Close application"
           type="button"
         >
-          <FiX
+          <X
             className="w-4 h-4 text-[#d8d4cf] hover:text-white transition-colors"
             strokeWidth={1.5}
           />

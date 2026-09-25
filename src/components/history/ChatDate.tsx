@@ -1,4 +1,4 @@
-import { FiClock } from "react-icons/fi";
+import { Clock } from "lucide-react";
 
 interface ChatDateProps {
   createdAt: string;
@@ -34,7 +34,7 @@ export const ChatDate = ({
 
   return (
     <div className="flex items-center justify-center gap-1 text-xs text-white/30 w-full">
-      <FiClock className="w-3 h-3" />
+      <Clock className="w-3 h-3" />
       <span>{formatDate(createdAt)}</span>
     </div>
   );

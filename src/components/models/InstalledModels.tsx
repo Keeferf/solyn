@@ -1,13 +1,13 @@
 import { useState } from "react";
 import {
-  FiTrash2,
-  FiHardDrive,
-  FiFolder,
-  FiSearch,
-  FiX,
-  FiRefreshCw,
-  FiAlertCircle,
-} from "react-icons/fi";
+  Trash,
+  HardDrive,
+  Folder,
+  Search,
+  X,
+  RefreshCw,
+  CircleAlert,
+} from "lucide-react";
 import { useInstalledModels, InstalledModel } from "./hooks/useInstalledModels";
 
 interface InstalledModelsProps {
@@ -88,13 +88,13 @@ export const InstalledModels = ({ onModelClick }: InstalledModelsProps) => {
       <div className="w-full space-y-6">
         <div className="flex items-center justify-between text-sm text-white/40 px-2 py-2 bg-black/50 rounded-lg border border-white/5">
           <div className="flex items-center gap-3">
-            <FiHardDrive className="text-purple-accent" size={16} />
+            <HardDrive className="text-purple-accent" size={16} />
             <span>Loading installed models...</span>
           </div>
         </div>
         <div className="flex items-center justify-center py-16">
           <div className="animate-spin text-purple-accent">
-            <FiRefreshCw size={32} />
+            <RefreshCw size={32} />
           </div>
         </div>
       </div>
@@ -106,7 +106,7 @@ export const InstalledModels = ({ onModelClick }: InstalledModelsProps) => {
       <div className="w-full space-y-6">
         <div className="flex items-center justify-between text-sm text-white/40 px-2 py-2 bg-black/50 rounded-lg border border-white/5">
           <div className="flex items-center gap-3">
-            <FiAlertCircle className="text-error" size={16} />
+            <CircleAlert className="text-error" size={16} />
             <span>Error loading installed models</span>
           </div>
         </div>
@@ -117,7 +117,7 @@ export const InstalledModels = ({ onModelClick }: InstalledModelsProps) => {
             onClick={refresh}
             className="px-4 py-2 bg-black hover:bg-white/10 rounded-lg text-white transition-all flex items-center gap-2 cursor-pointer"
           >
-            <FiRefreshCw size={16} />
+            <RefreshCw size={16} />
             Retry
           </button>
         </div>
@@ -129,7 +129,7 @@ export const InstalledModels = ({ onModelClick }: InstalledModelsProps) => {
     <div className="w-full">
       <div className="mb-6">
         <div className="relative">
-          <FiSearch
+          <Search
             className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30"
             size={16}
           />
@@ -145,7 +145,7 @@ export const InstalledModels = ({ onModelClick }: InstalledModelsProps) => {
               onClick={handleClearSearch}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors cursor-pointer"
             >
-              <FiX size={16} />
+              <X size={16} />
             </button>
           )}
         </div>
@@ -153,7 +153,7 @@ export const InstalledModels = ({ onModelClick }: InstalledModelsProps) => {
 
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2 text-sm text-white/40">
-          <FiHardDrive size={14} />
+          <HardDrive size={14} />
           <span>
             {models.length} model{models.length !== 1 ? "s" : ""} installed
             {models.length > 0 &&
@@ -165,7 +165,7 @@ export const InstalledModels = ({ onModelClick }: InstalledModelsProps) => {
           className="text-white/40 hover:text-white/60 transition-colors p-2 rounded-lg hover:bg-white/5 cursor-pointer"
           title="Refresh"
         >
-          <FiRefreshCw size={16} />
+          <RefreshCw size={16} />
         </button>
       </div>
 
@@ -210,7 +210,7 @@ export const InstalledModels = ({ onModelClick }: InstalledModelsProps) => {
                     onClick={() => onModelClick?.(model)}
                   >
                     <div className="flex items-center gap-3">
-                      <FiFolder className="text-purple-accent" size={20} />
+                      <Folder className="text-purple-accent" size={20} />
                       <div>
                         <h4 className="text-white font-semibold text-base">
                           {model.name || model.model_id}
@@ -221,7 +221,7 @@ export const InstalledModels = ({ onModelClick }: InstalledModelsProps) => {
                           </span>
                           <span className="text-white/20 text-xs">•</span>
                           <span className="text-white/30 text-xs flex items-center gap-1">
-                            <FiHardDrive size={12} />
+                            <HardDrive size={12} />
                             {formatFileSize(model.total_size)}
                           </span>
                           {hasMultipleQuants && (
@@ -278,12 +278,12 @@ export const InstalledModels = ({ onModelClick }: InstalledModelsProps) => {
                                     title={`Delete ${quant} quantization`}
                                   >
                                     {isDeleting ? (
-                                      <FiRefreshCw
+                                      <RefreshCw
                                         size={14}
                                         className="animate-spin"
                                       />
                                     ) : (
-                                      <FiTrash2 size={14} />
+                                      <Trash size={14} />
                                     )}
                                   </button>
                                 )}
@@ -321,7 +321,7 @@ export const InstalledModels = ({ onModelClick }: InstalledModelsProps) => {
                         className="text-white/30 hover:text-error transition-all p-2 rounded-lg hover:bg-error-bg cursor-pointer"
                         title="Delete entire model"
                       >
-                        <FiTrash2 size={16} />
+                        <Trash size={16} />
                       </button>
                     )}
                   </div>

@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { FiCopy, FiCheck } from "react-icons/fi";
+import { Copy, Check } from "lucide-react";
 import { type Highlighter } from "shiki";
 import { useThemeStore } from "@/stores/themeStore";
 import { getThemeColors } from "@/utils/themeColors";
@@ -74,12 +74,12 @@ export const CodeBlock = ({
           >
             {copied ? (
               <>
-                <FiCheck size={14} />
+                <Check size={14} />
                 <span>Copied!</span>
               </>
             ) : (
               <>
-                <FiCopy size={14} />
+                <Copy size={14} />
                 <span>Copy</span>
               </>
             )}
@@ -139,12 +139,12 @@ export const CodeBlock = ({
           >
             {copied ? (
               <>
-                <FiCheck size={14} />
+                <Check size={14} />
                 <span>Copied!</span>
               </>
             ) : (
               <>
-                <FiCopy size={14} />
+                <Copy size={14} />
                 <span>Copy</span>
               </>
             )}
@@ -194,12 +194,12 @@ export const CodeBlock = ({
           >
             {copied ? (
               <>
-                <FiCheck size={14} />
+                <Check size={14} />
                 <span>Copied!</span>
               </>
             ) : (
               <>
-                <FiCopy size={14} />
+                <Copy size={14} />
                 <span>Copy</span>
               </>
             )}

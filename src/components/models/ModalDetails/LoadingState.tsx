@@ -1,4 +1,4 @@
-import { FiLoader } from "react-icons/fi";
+import { Loader } from "lucide-react";
 import { ModalHeader } from "./ModalHeader";
 
 export const LoadingState = ({ onClose }: { onClose: () => void }) => (
@@ -11,7 +11,7 @@ export const LoadingState = ({ onClose }: { onClose: () => void }) => (
     <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden shadow-2xl animate-slideUp">
       <ModalHeader title="Loading model details..." onClose={onClose} />
       <div className="flex items-center justify-center py-16">
-        <FiLoader className="animate-spin text-purple-accent" size={40} />
+        <Loader className="animate-spin text-purple-accent" size={40} />
       </div>
     </div>
   </div>
