@@ -50,6 +50,8 @@ jobs:
           workspaces: src-tauri
 
       - run: pnpm install --frozen-lockfile
+      # generate_context!() needs the frontend dist/ to exist at compile time.
+      - run: pnpm build
 
       # Verify the exact commit being released before building anything.
       - name: Cargo test
