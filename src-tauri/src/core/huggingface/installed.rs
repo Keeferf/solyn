@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use tokio::fs;
 use tauri::{AppHandle, Manager};
 
-use super::utils::{extract_parameter_count, extract_quantization};
+use super::utils::{extract_parameter_count, extract_quantization, ollama_model_name};
 use crate::core::ollama::models::OllamaModelClient;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -76,8 +76,9 @@ async fn scan_model_directory(dir_path: &PathBuf) -> Option<InstalledModel> {
     
     let mut files = Vec::new();
     let mut total_size = 0;
-    let mut has_modelfile = false;
-    let mut modelfiles: Vec<String> = Vec::new();
+    // `read_dir` order is arbitrary, so check for the Modelfile up front
+    // instead of relying on encountering it before a .gguf file.
+    let modelfile_exists = dir_path.join("Modelfile").exists();
     
     let metadata = fs::metadata(dir_path).await.ok()?;
     let downloaded_at = metadata
@@ -112,10 +113,9 @@ async fn scan_model_directory(dir_path: &PathBuf) -> Option<InstalledModel> {
         if path.is_file() {
             let filename = path.file_name()?.to_str()?.to_string();
             
-            // Check for Modelfiles - now we only have "Modelfile"
+            // Modelfiles are not model files; presence is tracked via
+            // `modelfile_exists` above.
             if filename == "Modelfile" {
-                has_modelfile = true;
-                modelfiles.push(filename);
                 continue;
             }
             
@@ -126,8 +126,7 @@ async fn scan_model_directory(dir_path: &PathBuf) -> Option<InstalledModel> {
                 let parameter_count = extract_parameter_count(&filename);
                 let quantization = extract_quantization(&filename);
                 
-                // Since we only generate "Modelfile" now, check if it exists
-                let modelfile_name = if modelfiles.contains(&"Modelfile".to_string()) {
+                let modelfile_name = if modelfile_exists {
                     Some("Modelfile".to_string())
                 } else {
                     None
@@ -158,18 +157,14 @@ async fn scan_model_directory(dir_path: &PathBuf) -> Option<InstalledModel> {
         files,
         total_size,
         downloaded_at,
-        has_modelfile,
+        has_modelfile: modelfile_exists,
     })
 }
 
 /// Ollama model names that correspond to a downloaded GGUF file.
 /// Must match the naming used in `generate_modelfile` / `get_chat_models`.
 fn ollama_model_names(model_id: &str, filename: &str) -> Vec<String> {
-    let base = model_id.replace("/", "_");
-    let name = match extract_quantization(filename) {
-        Some(quantization) => format!("{}_{}", base, quantization),
-        None => base,
-    };
+    let name = ollama_model_name(model_id, extract_quantization(filename).as_deref());
     vec![name.clone(), format!("{}:latest", name)]
 }
 
@@ -367,7 +362,7 @@ pub async fn delete_model_quantization(
 
 #[cfg(test)]
 mod tests {
-    use super::ollama_model_names;
+    use super::{ollama_model_names, scan_model_directory};
 
     #[test]
     fn ollama_names_include_quantization_and_latest() {
@@ -391,5 +386,69 @@ mod tests {
             names,
             vec!["author_model".to_string(), "author_model:latest".to_string()]
         );
+    }
+
+    #[test]
+    fn ollama_names_extract_quantization_from_hyphenated_filename() {
+        // The old `split('_')` heuristic returned no quantization here.
+        let names = ollama_model_names(
+            "meta-llama/Llama-3.1-8B-Instruct",
+            "Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+        );
+        assert_eq!(
+            names,
+            vec![
+                "meta-llama_Llama-3.1-8B-Instruct_Q4_K_M".to_string(),
+                "meta-llama_Llama-3.1-8B-Instruct_Q4_K_M:latest".to_string(),
+            ]
+        );
+    }
+
+    #[tokio::test]
+    async fn scan_model_directory_reads_gguf_and_modelfile() {
+        let dir = tempfile::tempdir().unwrap();
+        let model_dir = dir.path().join("author_modelname");
+        std::fs::create_dir(&model_dir).unwrap();
+        std::fs::write(model_dir.join("model-Q4_K_M.gguf"), vec![0u8; 128]).unwrap();
+        std::fs::write(model_dir.join("Modelfile"), "FROM ./model-Q4_K_M.gguf").unwrap();
+        std::fs::write(model_dir.join("README.md"), "docs").unwrap();
+
+        let model = scan_model_directory(&model_dir).await.unwrap();
+
+        assert_eq!(model.model_id, "author/modelname");
+        assert_eq!(model.author, "author");
+        assert_eq!(model.name, "modelname");
+        assert_eq!(model.files.len(), 1);
+        assert_eq!(model.total_size, 128);
+        assert_eq!(model.files[0].filename, "model-Q4_K_M.gguf");
+        assert_eq!(model.files[0].quantization.as_deref(), Some("Q4_K_M"));
+        assert!(model.files[0].has_modelfile);
+        assert_eq!(model.files[0].modelfile_name.as_deref(), Some("Modelfile"));
+        // Must not depend on the arbitrary read_dir order (Modelfile was
+        // written after the .gguf here).
+        assert!(model.has_modelfile);
+    }
+
+    #[tokio::test]
+    async fn scan_model_directory_has_no_modelfile_when_absent() {
+        let dir = tempfile::tempdir().unwrap();
+        let model_dir = dir.path().join("author_modelname");
+        std::fs::create_dir(&model_dir).unwrap();
+        std::fs::write(model_dir.join("model.gguf"), b"x").unwrap();
+
+        let model = scan_model_directory(&model_dir).await.unwrap();
+        assert!(!model.has_modelfile);
+        assert!(!model.files[0].has_modelfile);
+        assert!(model.files[0].modelfile_name.is_none());
+    }
+
+    #[tokio::test]
+    async fn scan_model_directory_returns_none_without_gguf() {
+        let dir = tempfile::tempdir().unwrap();
+        let model_dir = dir.path().join("author_modelname");
+        std::fs::create_dir(&model_dir).unwrap();
+        std::fs::write(model_dir.join("README.md"), "docs").unwrap();
+
+        assert!(scan_model_directory(&model_dir).await.is_none());
     }
 }

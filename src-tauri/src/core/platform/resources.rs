@@ -260,3 +260,27 @@ pub struct ModelCompatibility {
     pub recommended_memory_gb: f64,
     pub status: String,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn formats_bytes_across_units() {
+        assert_eq!(format_bytes(0), "0 B");
+        assert_eq!(format_bytes(512), "512 B");
+        assert_eq!(format_bytes(1024), "1.0 KB");
+        assert_eq!(format_bytes(1536), "1.5 KB");
+        assert_eq!(format_bytes(1024 * 1024), "1.0 MB");
+        assert_eq!(format_bytes(1024 * 1024 * 1024), "1.0 GB");
+    }
+
+    #[test]
+    fn formats_uptime_for_each_unit() {
+        assert_eq!(format_uptime(45), "45s");
+        assert_eq!(format_uptime(90), "1m");
+        assert_eq!(format_uptime(3600), "1h 0m");
+        assert_eq!(format_uptime(3661), "1h 1m");
+        assert_eq!(format_uptime(90061), "1d 1h 1m");
+    }
+}

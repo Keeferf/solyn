@@ -9,6 +9,8 @@ use crate::core::huggingface::{
     delete_installed_model,
     delete_model_file,
     delete_model_quantization,
+    extract_quantization,
+    ollama_model_name,
     write_modelfile,
     ModelFileConfig,
 };
@@ -90,20 +92,11 @@ pub async fn generate_modelfile(
         return Err("Model directory not found".to_string());
     }
     
-    // Extract quantization from filename
-    let quantization = filename
-        .split('_')
-        .find(|part| part.starts_with('Q') || part.starts_with("IQ") || part.starts_with("F"))
-        .unwrap_or("default")
-        .to_string();
-    
-    // Generate the ollama model name WITHOUT :latest suffix
-    // This should match what we use in get_chat_models
-    let ollama_model_name = if quantization != "default" {
-        format!("{}_{}", model_id.replace("/", "_"), quantization)
-    } else {
-        model_id.replace("/", "_")
-    };
+    // Extract quantization from the filename and build the canonical Ollama
+    // name so it matches the download manager and `get_chat_models`.
+    let quantization = extract_quantization(&filename)
+        .unwrap_or_else(|| "default".to_string());
+    let ollama_model_name = ollama_model_name(&model_id, Some(&quantization));
     
     
     let config = ModelFileConfig {

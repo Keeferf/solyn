@@ -57,6 +57,7 @@ pub use huggingface::{
     ModelFileConfig,
     extract_parameter_count,
     extract_quantization,
+    ollama_model_name,
 };
 
 // Re-export from platform

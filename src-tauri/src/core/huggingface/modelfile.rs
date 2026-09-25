@@ -73,3 +73,71 @@ pub async fn write_metadata(
 
     Ok(path)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn modelfile_content_references_local_file() {
+        let config = ModelFileConfig {
+            model_id: "author/repo".to_string(),
+            gguf_filename: "model-Q4_K_M.gguf".to_string(),
+            model_dir: PathBuf::from("/tmp/does-not-matter"),
+        };
+        let content = generate_modelfile_content(&config);
+        assert!(content.contains("# Hugging Face Model: author/repo"));
+        assert!(content.contains("FROM ./model-Q4_K_M.gguf"));
+    }
+
+    #[test]
+    fn modelfile_name_is_constant() {
+        assert_eq!(get_modelfile_name(), "Modelfile");
+    }
+
+    #[tokio::test]
+    async fn write_modelfile_and_metadata_roundtrip() {
+        let dir = tempfile::tempdir().unwrap();
+        let model_dir = dir.path().to_path_buf();
+        let config = ModelFileConfig {
+            model_id: "author/repo".to_string(),
+            gguf_filename: "model-Q8_0.gguf".to_string(),
+            model_dir: model_dir.clone(),
+        };
+
+        let path = write_modelfile(&model_dir, &config).await.unwrap();
+        assert_eq!(path, model_dir.join("Modelfile"));
+        let content = std::fs::read_to_string(&path).unwrap();
+        assert!(content.contains("FROM ./model-Q8_0.gguf"));
+
+        let meta_path = write_metadata(
+            &model_dir,
+            "author/repo",
+            "model-Q8_0.gguf",
+            Some("Q8_0".to_string()),
+            Some("7B".to_string()),
+        )
+        .await
+        .unwrap();
+        let meta: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&meta_path).unwrap()).unwrap();
+        assert_eq!(meta["model_id"], "author/repo");
+        assert_eq!(meta["filename"], "model-Q8_0.gguf");
+        assert_eq!(meta["quantization"], "Q8_0");
+        assert_eq!(meta["parameter_count"], "7B");
+    }
+
+    #[tokio::test]
+    async fn write_metadata_omits_unknown_fields() {
+        let dir = tempfile::tempdir().unwrap();
+        let model_dir = dir.path().to_path_buf();
+
+        let meta_path = write_metadata(&model_dir, "a/b", "m.gguf", None, None)
+            .await
+            .unwrap();
+        let meta: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&meta_path).unwrap()).unwrap();
+        assert!(meta.get("quantization").is_none());
+        assert!(meta.get("parameter_count").is_none());
+    }
+}

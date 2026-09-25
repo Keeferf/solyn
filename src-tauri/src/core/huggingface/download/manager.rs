@@ -11,7 +11,7 @@ use super::progress_reporting::*;
 
 use crate::core::huggingface::cache::{generate_download_id, insert_cancellation_token, remove_cancellation_token};
 use crate::core::huggingface::modelfile::{write_modelfile, ModelFileConfig, write_metadata};
-use crate::core::huggingface::utils::{extract_parameter_count, extract_quantization};
+use crate::core::huggingface::utils::{extract_parameter_count, extract_quantization, ollama_model_name};
 use crate::core::ollama::models::OllamaModelClient;
 
 const PARALLEL_CHUNKS: usize = 8;
@@ -70,7 +70,7 @@ impl DownloadManager {
         ).await;
 
         // Send completion event
-        let model_name = format!("{}_{}", model_id.replace("/", "_"), quantization);
+        let model_name = ollama_model_name(model_id, Some(quantization.as_str()));
         send_completion_event(
             app_handle,
             model_id,
@@ -417,7 +417,7 @@ impl DownloadManager {
             "Creating Ollama model..."
         );
 
-        let model_name = format!("{}_{}", model_id.replace("/", "_"), quantization);
+        let model_name = ollama_model_name(model_id, Some(quantization));
         let ollama_client = OllamaModelClient::new();
         let max_retries = 3;
         let mut current_retry = 0;

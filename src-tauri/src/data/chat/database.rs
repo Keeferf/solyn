@@ -55,6 +55,11 @@ impl ChatDatabase {
     }
     
     fn initialize_database(conn: &Connection) -> Result<(), String> {
+        // SQLite disables foreign keys per-connection by default, so the
+        // ON DELETE CASCADE below is inert unless we opt in.
+        conn.execute("PRAGMA foreign_keys = ON", [])
+            .map_err(|e| e.to_string())?;
+
         conn.execute(
             "CREATE TABLE IF NOT EXISTS chat_sessions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -280,6 +285,80 @@ impl ChatDatabase {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn test_db() -> ChatDatabase {
+        let conn = Connection::open_in_memory().unwrap();
+        ChatDatabase::initialize_database(&conn).unwrap();
+        ChatDatabase {
+            conn: Arc::new(Mutex::new(conn)),
+        }
+    }
+
+    #[tokio::test]
+    async fn session_crud_roundtrip() {
+        let db = test_db();
+
+        let id = db.create_session("llama3:latest", None).await.unwrap();
+        let sessions = db.get_sessions().await.unwrap();
+        assert_eq!(sessions.len(), 1);
+        assert_eq!(sessions[0].id, id);
+        assert_eq!(sessions[0].title, "New Chat");
+        assert_eq!(sessions[0].model_name, "llama3:latest");
+
+        db.update_session_title(id, "Renamed").await.unwrap();
+        let sessions = db.get_sessions().await.unwrap();
+        assert_eq!(sessions[0].title, "Renamed");
+
+        db.delete_session(id).await.unwrap();
+        assert!(db.get_sessions().await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn stores_messages_with_thinking() {
+        let db = test_db();
+        let id = db.create_session("m", Some("Chat")).await.unwrap();
+
+        db.add_message(id, "user", "hi", None).await.unwrap();
+        db.add_message(id, "assistant", "hello", Some("reasoning")).await.unwrap();
+
+        let messages = db.get_messages_for_session(id).await.unwrap();
+        assert_eq!(messages.len(), 2);
+        assert_eq!(messages[0].role, "user");
+        assert_eq!(messages[0].content, "hi");
+        assert_eq!(messages[0].thinking, None);
+        assert_eq!(messages[1].role, "assistant");
+        assert_eq!(messages[1].content, "hello");
+        assert_eq!(messages[1].thinking.as_deref(), Some("reasoning"));
+    }
+
+    #[tokio::test]
+    async fn get_messages_since_excludes_older_ids() {
+        let db = test_db();
+        let id = db.create_session("m", None).await.unwrap();
+        let first = db.add_message(id, "user", "one", None).await.unwrap();
+        db.add_message(id, "assistant", "two", None).await.unwrap();
+
+        let since = db.get_messages_for_session_since(id, first).await.unwrap();
+        assert_eq!(since.len(), 1);
+        assert_eq!(since[0].content, "two");
+    }
+
+    #[tokio::test]
+    async fn get_session_with_messages_returns_none_for_missing() {
+        let db = test_db();
+        assert!(db.get_session_with_messages(999).await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn deleting_session_cascades_to_messages() {
+        let db = test_db();
+        let id = db.create_session("m", None).await.unwrap();
+        db.add_message(id, "user", "hi", None).await.unwrap();
+
+        db.delete_session(id).await.unwrap();
+
+        assert!(db.get_messages_for_session(id).await.unwrap().is_empty());
+    }
 
     #[test]
     fn migrates_old_messages_table_without_thinking() {

@@ -30,4 +30,4 @@ pub use modelfile::{
     ModelFileConfig,
     get_modelfile_name
 };
-pub use utils::{extract_parameter_count, extract_quantization};
+pub use utils::{extract_parameter_count, extract_quantization, ollama_model_name};
