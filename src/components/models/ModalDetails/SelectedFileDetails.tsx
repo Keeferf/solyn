@@ -1,12 +1,12 @@
 import {
-  FiFile,
-  FiHardDrive,
-  FiInfo,
-  FiCpu,
-  FiDownload,
-  FiLoader,
-  FiX,
-} from "react-icons/fi";
+  File,
+  HardDrive,
+  Info,
+  Cpu,
+  Download,
+  Loader,
+  X,
+} from "lucide-react";
 import { GGUFFile } from "../hooks/useHuggingFaceModels";
 import {
   formatFileSize,
@@ -51,36 +51,36 @@ export const SelectedFileDetails = ({
       <div className="flex items-center justify-between">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <FiFile className="text-purple-accent" size={16} />
+            <File className="text-purple-accent" size={16} />
             <span className="text-white text-sm font-mono truncate">
               {file.filename}
             </span>
           </div>
           <div className="flex items-center gap-4 mt-2 text-xs text-white/40 flex-wrap">
             <span className="flex items-center gap-1">
-              <FiHardDrive size={12} />
+              <HardDrive size={12} />
               {formatFileSize(file.size)}
             </span>
             <span className="flex items-center gap-1">
-              <FiInfo size={12} />
+              <Info size={12} />
               {getQuantizationDescription(quant)}
             </span>
             {file.parameter_count && (
               <span className="flex items-center gap-1 text-emerald-400">
-                <FiCpu size={12} />
+                <Cpu size={12} />
                 {formatParameterCount(file.parameter_count)}
               </span>
             )}
           </div>
           {isDownloading && !isCancelling && (
             <span className="text-purple-accent text-xs flex items-center gap-1 mt-2">
-              <FiLoader className="animate-spin" size={12} />
+              <Loader className="animate-spin" size={12} />
               Downloading...
             </span>
           )}
           {isCancelling && (
             <span className="text-yellow-400 text-xs flex items-center gap-1 mt-2">
-              <FiLoader className="animate-spin" size={12} />
+              <Loader className="animate-spin" size={12} />
               Cancelling...
             </span>
           )}
@@ -92,7 +92,7 @@ export const SelectedFileDetails = ({
               disabled={isCancelling}
               className="px-6 py-2.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-sm font-medium transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed border border-red-500/20 hover:border-red-500/40"
             >
-              <FiX size={16} />
+              <X size={16} />
               Cancel
             </button>
           ) : (
@@ -103,17 +103,17 @@ export const SelectedFileDetails = ({
             >
               {isCancelling ? (
                 <>
-                  <FiLoader className="animate-spin" size={16} />
+                  <Loader className="animate-spin" size={16} />
                   Cancelling...
                 </>
               ) : isDownloading ? (
                 <>
-                  <FiLoader className="animate-spin" size={16} />
+                  <Loader className="animate-spin" size={16} />
                   Downloading...
                 </>
               ) : (
                 <>
-                  <FiDownload size={16} />
+                  <Download size={16} />
                   Download
                 </>
               )}

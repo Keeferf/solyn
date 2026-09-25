@@ -1,4 +1,4 @@
-import { FiSearch, FiTerminal, FiPaperclip, FiArrowUp } from "react-icons/fi";
+import { Search, Terminal, Paperclip, ArrowUp } from "lucide-react";
 import { ToggleButton } from "./ToggleButton";
 import { ModelSelector } from "./ModelSelector";
 import { ModeToggle } from "./ModeToggle";
@@ -54,17 +54,17 @@ export const ChatControls = ({
         <ToggleButton
           isActive={isAttachmentEnabled}
           onClick={onAttachmentClick}
-          icon={<FiPaperclip size={18} />}
+          icon={<Paperclip size={18} />}
         />
         <ToggleButton
           isActive={isSearchEnabled}
           onClick={onSearchToggle}
-          icon={<FiSearch size={18} />}
+          icon={<Search size={18} />}
         />
         <ToggleButton
           isActive={isCodeEnabled}
           onClick={onCodeToggle}
-          icon={<FiTerminal size={18} />}
+          icon={<Terminal size={18} />}
         />
         <input
           ref={fileInputRef}
@@ -93,7 +93,7 @@ export const ChatControls = ({
           disabled={isSubmitDisabled}
           className="p-2 bg-purple-accent hover:bg-purple-accent/80 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors text-white cursor-pointer"
         >
-          <FiArrowUp size={18} />
+          <ArrowUp size={18} />
         </button>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { FiChevronDown } from "react-icons/fi";
+import { ChevronDown } from "lucide-react";
 import { ModelType, ChatModel } from "./hooks/useModelSelection";
 
 interface ModelSelectorProps {
@@ -41,7 +41,7 @@ export const ModelSelector = ({
         className="flex items-center gap-1.5 px-2 py-1 text-xs text-white/80 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors cursor-pointer h-8 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <span>{isLoading ? "Loading..." : selectedLabel}</span>
-        <FiChevronDown
+        <ChevronDown
           size={12}
           className={`transition-transform ${isOpen ? "rotate-180" : ""}`}
         />

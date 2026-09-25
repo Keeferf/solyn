@@ -1,4 +1,4 @@
-import { FiX, FiLoader, FiCheckCircle, FiAlertCircle } from "react-icons/fi";
+import { X, Loader, CircleCheck, CircleAlert } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 
 interface DownloadStatusDisplayProps {
@@ -59,16 +59,16 @@ export const DownloadStatusDisplay = ({
 
   const StatusIcon = () => {
     if (isComplete)
-      return <FiCheckCircle className="text-success shrink-0" size={16} />;
+      return <CircleCheck className="text-success shrink-0" size={16} />;
     if (isError)
-      return <FiAlertCircle className="text-error shrink-0" size={16} />;
+      return <CircleAlert className="text-error shrink-0" size={16} />;
     if (isCancelled)
-      return <FiAlertCircle className="text-warning shrink-0" size={16} />;
+      return <CircleAlert className="text-warning shrink-0" size={16} />;
     if (isProcessing)
-      return <FiLoader className="animate-spin text-info shrink-0" size={16} />;
+      return <Loader className="animate-spin text-info shrink-0" size={16} />;
     if (isStarting || isActive)
       return (
-        <FiLoader
+        <Loader
           className="animate-spin text-purple-accent shrink-0"
           size={16}
         />
@@ -94,7 +94,7 @@ export const DownloadStatusDisplay = ({
               onClick={handleCancel}
               className="px-3 py-1 bg-error-bg hover:bg-error-border text-error rounded-lg text-xs transition-all cursor-pointer border border-error-border hover:border-error-border flex items-center gap-1"
             >
-              <FiX size={12} />
+              <X size={12} />
               Cancel
             </button>
           )}

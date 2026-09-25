@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { FiPenTool, FiCheck, FiChevronDown } from "react-icons/fi";
+import { PenTool, Check, ChevronDown } from "lucide-react";
 import { useThemeStore } from "@/stores/themeStore";
 
 // All available themes from Shiki
@@ -95,7 +95,7 @@ export const ThemeSwitcher = ({ collapsed = false }: ThemeSwitcherProps) => {
           className="w-full flex items-center justify-center rounded-lg transition-all duration-200 text-white/60 hover:bg-white/5 hover:text-white cursor-pointer p-2"
           title="Change theme"
         >
-          <FiPenTool size={20} />
+          <PenTool size={20} />
         </button>
 
         {isOpen && (
@@ -114,7 +114,7 @@ export const ThemeSwitcher = ({ collapsed = false }: ThemeSwitcherProps) => {
                 >
                   <span>{t.label}</span>
                   {theme === t.id && (
-                    <FiCheck size={14} className="text-purple-accent" />
+                    <Check size={14} className="text-purple-accent" />
                   )}
                 </button>
               ))}
@@ -132,12 +132,12 @@ export const ThemeSwitcher = ({ collapsed = false }: ThemeSwitcherProps) => {
         className="w-full flex items-center justify-between rounded-lg transition-all duration-200 text-white/60 hover:bg-white/5 hover:text-white cursor-pointer px-3 py-2"
       >
         <div className="flex items-center gap-3">
-          <FiPenTool size={18} />
+          <PenTool size={18} />
           <span className="text-sm font-medium">Theme</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-white/40">{currentLabel}</span>
-          <FiChevronDown
+          <ChevronDown
             size={14}
             className={`transition-transform duration-200 ${
               isOpen ? "rotate-180" : ""
@@ -162,7 +162,7 @@ export const ThemeSwitcher = ({ collapsed = false }: ThemeSwitcherProps) => {
               >
                 <span>{t.label}</span>
                 {theme === t.id && (
-                  <FiCheck size={14} className="text-purple-accent" />
+                  <Check size={14} className="text-purple-accent" />
                 )}
               </button>
             ))}

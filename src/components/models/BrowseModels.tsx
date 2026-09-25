@@ -1,12 +1,12 @@
 import {
-  FiLoader,
-  FiServer,
-  FiUser,
-  FiRefreshCw,
-  FiHeart,
-  FiDownloadCloud,
-  FiChevronRight,
-} from "react-icons/fi";
+  Loader,
+  Server,
+  User,
+  RefreshCw,
+  Heart,
+  CloudDownload,
+  ChevronRight,
+} from "lucide-react";
 import { HFModelSummary } from "./hooks/useHuggingFaceModels";
 
 interface BrowseModelsProps {
@@ -68,12 +68,12 @@ export const BrowseModels = ({
       <div className="w-full space-y-6">
         <div className="flex items-center justify-between text-sm text-white/40 px-2 py-2 bg-black/50 rounded-lg border border-white/5">
           <div className="flex items-center gap-3">
-            <FiServer className="text-purple-accent" size={16} />
+            <Server className="text-purple-accent" size={16} />
             <span>Loading GGUF models from Hugging Face...</span>
           </div>
         </div>
         <div className="flex items-center justify-center py-16">
-          <FiLoader className="animate-spin text-purple-accent" size={40} />
+          <Loader className="animate-spin text-purple-accent" size={40} />
         </div>
       </div>
     );
@@ -84,7 +84,7 @@ export const BrowseModels = ({
       <div className="w-full space-y-6">
         <div className="flex items-center justify-between text-sm text-white/40 px-2 py-2 bg-black/50 rounded-lg border border-white/5">
           <div className="flex items-center gap-3">
-            <FiServer className="text-purple-accent" size={16} />
+            <Server className="text-purple-accent" size={16} />
             <span>Error loading GGUF models</span>
           </div>
         </div>
@@ -96,7 +96,7 @@ export const BrowseModels = ({
               onClick={onRefresh}
               className="px-4 py-2 bg-black hover:bg-white/10 rounded-lg text-white transition-all flex items-center gap-2 cursor-pointer"
             >
-              <FiRefreshCw size={16} />
+              <RefreshCw size={16} />
               Retry
             </button>
           )}
@@ -135,7 +135,7 @@ export const BrowseModels = ({
                   onClick={onRefresh}
                   className="mt-4 px-4 py-2 bg-black hover:bg-white/10 rounded-lg text-white transition-all flex items-center gap-2 mx-auto cursor-pointer"
                 >
-                  <FiRefreshCw size={16} />
+                  <RefreshCw size={16} />
                   Refresh
                 </button>
               )}
@@ -171,7 +171,7 @@ export const BrowseModels = ({
                       {model.name || model.model_id}
                     </h4>
                     <div className="flex items-center gap-2 mt-1">
-                      <FiUser className="text-white/30" size={12} />
+                      <User className="text-white/30" size={12} />
                       <span className="text-white/40 text-xs">
                         {model.author || "Unknown"}
                       </span>
@@ -179,7 +179,7 @@ export const BrowseModels = ({
                   </div>
                   {isDownloading && (
                     <div className="text-purple-accent">
-                      <FiLoader className="animate-spin" size={16} />
+                      <Loader className="animate-spin" size={16} />
                     </div>
                   )}
                 </div>
@@ -187,13 +187,13 @@ export const BrowseModels = ({
                 <div className="flex flex-wrap gap-2 mb-3">
                   {model.downloads !== undefined && model.downloads > 0 && (
                     <span className="text-xs bg-success-bg text-success px-2 py-1 rounded-full border border-success-border flex items-center gap-1">
-                      <FiDownloadCloud size={12} />
+                      <CloudDownload size={12} />
                       {formatDownloads(model.downloads)}
                     </span>
                   )}
                   {model.likes !== undefined && model.likes > 0 && (
                     <span className="text-xs bg-error-bg text-error px-2 py-1 rounded-full border border-error-border flex items-center gap-1">
-                      <FiHeart size={12} />
+                      <Heart size={12} />
                       {formatLikes(model.likes)}
                     </span>
                   )}
@@ -202,7 +202,7 @@ export const BrowseModels = ({
                 <div className="flex items-center justify-end mt-auto pt-3 border-t border-white/5">
                   <span className="text-xs text-white/30 flex items-center gap-1 group-hover:text-white/60 transition-colors">
                     View all quantizations
-                    <FiChevronRight
+                    <ChevronRight
                       size={14}
                       className="text-white/20 group-hover:text-purple-accent/60 transition-all group-hover:translate-x-1"
                     />

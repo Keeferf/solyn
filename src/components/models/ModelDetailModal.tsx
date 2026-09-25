@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FiFolder, FiX } from "react-icons/fi";
+import { Folder, X } from "lucide-react";
 import { GGUFFile } from "./hooks/useHuggingFaceModels";
 import { useModelDetails } from "./hooks/useModelDetails";
 import {
@@ -105,7 +105,7 @@ export const ModelDetailModal = ({
             onClick={onClose}
             className="p-2 hover:bg-white/10 rounded-lg transition-all text-white/60 hover:text-white cursor-pointer"
           >
-            <FiX size={20} />
+            <X size={20} />
           </button>
         </div>
 
@@ -120,7 +120,7 @@ export const ModelDetailModal = ({
 
           <div className="mb-6">
             <h4 className="text-sm font-semibold text-white/60 mb-3 flex items-center gap-2">
-              <FiFolder size={16} />
+              <Folder size={16} />
               Available Quantizations ({validFiles.length} files)
             </h4>
 

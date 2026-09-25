@@ -1,6 +1,6 @@
 // ConfirmationModal.tsx
 import { useEffect, useRef } from "react";
-import { FiAlertTriangle, FiX } from "react-icons/fi";
+import { TriangleAlert, X } from "lucide-react";
 
 interface ConfirmationModalProps {
   isOpen: boolean;
@@ -79,7 +79,7 @@ export const ConfirmationModal = ({
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-full bg-error-bg">
-              <FiAlertTriangle className="w-5 h-5 text-error" />
+              <TriangleAlert className="w-5 h-5 text-error" />
             </div>
             <h2 className="text-xl font-semibold text-white">{title}</h2>
           </div>
@@ -87,7 +87,7 @@ export const ConfirmationModal = ({
             onClick={onClose}
             className="text-white/40 hover:text-white/70 transition-colors cursor-pointer"
           >
-            <FiX className="w-5 h-5" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 

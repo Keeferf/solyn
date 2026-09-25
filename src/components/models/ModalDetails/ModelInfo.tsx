@@ -1,4 +1,4 @@
-import { FiUser, FiDownloadCloud, FiHeart } from "react-icons/fi";
+import { User, CloudDownload, Heart } from "lucide-react";
 import { formatDownloads } from "../utils/modalUtils";
 
 export const ModelInfo = ({
@@ -19,19 +19,19 @@ export const ModelInfo = ({
     <div className="flex items-center gap-3 mt-1">
       {details.author && (
         <div className="flex items-center gap-1 text-white/40 text-sm">
-          <FiUser size={14} />
+          <User size={14} />
           <span>{details.author}</span>
         </div>
       )}
       {details.downloads !== undefined && details.downloads > 0 && (
         <div className="flex items-center gap-1 text-white/40 text-sm">
-          <FiDownloadCloud size={14} />
+          <CloudDownload size={14} />
           <span>{formatDownloads(details.downloads)}</span>
         </div>
       )}
       {details.likes !== undefined && details.likes > 0 && (
         <div className="flex items-center gap-1 text-white/40 text-sm">
-          <FiHeart size={14} />
+          <Heart size={14} />
           <span>{details.likes}</span>
         </div>
       )}

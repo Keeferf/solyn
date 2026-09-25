@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { FiX } from "react-icons/fi";
+import { X } from "lucide-react";
 
 interface RenameModalProps {
   isOpen: boolean;
@@ -59,7 +59,7 @@ export const RenameModal = ({
             onClick={onClose}
             className="text-white/40 hover:text-white/70 transition-colors cursor-pointer"
           >
-            <FiX className="w-5 h-5" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 

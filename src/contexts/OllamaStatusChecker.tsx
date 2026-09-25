@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { useOllama } from "../contexts/OllamaContext";
 import { OllamaDownloadPage } from "@/components/OllamaDownloadPage";
 import {
-  FiDownload,
-  FiExternalLink,
-  FiServer,
-  FiAlertCircle,
-} from "react-icons/fi";
+  Download,
+  ExternalLink,
+  Server,
+  CircleAlert,
+} from "lucide-react";
 
 interface OllamaStatusCheckerProps {
   children: React.ReactNode;
@@ -71,7 +71,7 @@ export const OllamaStatusChecker = ({ children }: OllamaStatusCheckerProps) => {
         <div className="text-center max-w-md p-8">
           <div className="mb-6">
             <div className="w-20 h-20 mx-auto mb-4 bg-purple-accent/20 rounded-full flex items-center justify-center">
-              <FiServer className="w-10 h-10 text-purple-accent" />
+              <Server className="w-10 h-10 text-purple-accent" />
             </div>
             <h2 className="text-2xl font-bold text-white mb-2">
               Ollama Not Installed
@@ -87,7 +87,7 @@ export const OllamaStatusChecker = ({ children }: OllamaStatusCheckerProps) => {
               onClick={() => setShowDownloadPage(true)}
               className="w-full px-6 py-3 bg-purple-accent hover:bg-purple-accent/80 text-white rounded-xl font-medium transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <FiDownload size={18} />
+              <Download size={18} />
               Download Ollama
             </button>
 
@@ -98,7 +98,7 @@ export const OllamaStatusChecker = ({ children }: OllamaStatusCheckerProps) => {
               className="inline-flex items-center justify-center gap-2 text-white/40 hover:text-white/60 text-sm transition-colors cursor-pointer"
             >
               Visit Ollama Website
-              <FiExternalLink size={14} />
+              <ExternalLink size={14} />
             </a>
           </div>
 
@@ -159,7 +159,7 @@ export const OllamaStatusChecker = ({ children }: OllamaStatusCheckerProps) => {
 
           {startError ? (
             <div className="mt-4 p-3 bg-amber-500/20 border border-amber-500/50 rounded-lg flex items-start gap-2">
-              <FiAlertCircle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+              <CircleAlert className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
               <p className="text-amber-500/80 text-xs text-left">
                 {startError}
               </p>

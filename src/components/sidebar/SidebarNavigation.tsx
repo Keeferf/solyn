@@ -1,22 +1,22 @@
 import {
-  FiPlus,
-  FiSearch,
-  FiMessageSquare,
-  FiMoreHorizontal,
-  FiLayers,
-} from "react-icons/fi";
+  Plus,
+  Search,
+  MessageSquare,
+  Ellipsis,
+  Layers,
+} from "lucide-react";
 
 export const NAVIGATION_ITEMS = [
-  { id: "new-chat", icon: FiPlus, label: "New Chat" },
-  { id: "search", icon: FiSearch, label: "Search" },
-  { id: "chats", icon: FiMessageSquare, label: "Chats" },
-  { id: "models", icon: FiLayers, label: "Models" },
+  { id: "new-chat", icon: Plus, label: "New Chat" },
+  { id: "search", icon: Search, label: "Search" },
+  { id: "chats", icon: MessageSquare, label: "Chats" },
+  { id: "models", icon: Layers, label: "Models" },
 ];
 
 export const FOOTER_ITEMS = [
   {
     id: "more",
-    icon: FiMoreHorizontal,
+    icon: Ellipsis,
     label: "More features coming",
     disabled: true,
   },

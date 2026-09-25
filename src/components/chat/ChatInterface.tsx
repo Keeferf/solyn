@@ -1,6 +1,6 @@
 // src/components/chat/ChatInterface.tsx
 import { useState, useEffect } from "react";
-import { FiX, FiPlus, FiEdit2, FiTrash2 } from "react-icons/fi";
+import { X, Plus, Pen, Trash } from "lucide-react";
 import { ChatInput } from "./ChatInput";
 import { ChatControls } from "./ChatControls";
 import { ChatMessages } from "./ChatMessages";
@@ -191,7 +191,7 @@ export const ChatInterface = () => {
               onClick={() => setShowHistory(false)}
               className="text-gray-400 hover:text-white"
             >
-              <FiX size={18} />
+              <X size={18} />
             </button>
           </div>
 
@@ -206,7 +206,7 @@ export const ChatInterface = () => {
                 }}
                 className="w-full text-left px-3 py-2 text-sm bg-purple-accent hover:bg-purple-accent/80 text-white rounded-lg transition-colors flex items-center gap-2"
               >
-                <FiPlus size={16} />
+                <Plus size={16} />
                 New Chat
               </button>
 
@@ -240,7 +240,7 @@ export const ChatInterface = () => {
                         }}
                         className="text-gray-500 hover:text-gray-300 text-xs p-1"
                       >
-                        <FiEdit2 size={12} />
+                        <Pen size={12} />
                       </button>
                       <button
                         onClick={(e) => {
@@ -249,7 +249,7 @@ export const ChatInterface = () => {
                         }}
                         className="text-gray-500 hover:text-red-400 text-xs p-1"
                       >
-                        <FiTrash2 size={12} />
+                        <Trash size={12} />
                       </button>
                     </div>
                   </div>
