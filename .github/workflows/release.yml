@@ -1,25 +1,23 @@
 name: Release
 
 on:
-  push:
-    tags: ['v*']
+  release:
+    types: [published]
+
+permissions:
+  contents: write
 
 jobs:
-  publish:
-    permissions:
-      contents: write
+  release:
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Bundle names must match what install.sh / install.ps1 look for.
-          # Linux: solyn_<version>_amd64.deb, solyn_<version>_amd64.AppImage
-          # Windows: solyn_<version>_x64_en-US.msi, solyn_<version>_x64-setup.exe
-          - platform: ubuntu-22.04
-            args: '--bundles deb,appimage'
-          - platform: windows-latest
-            args: '--bundles msi,nsis'
-    runs-on: ${{ matrix.platform }}
+          - os: ubuntu-latest
+            bundle_args: --bundles deb,appimage
+          - os: windows-latest
+            bundle_args: --bundles msi,nsis
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
@@ -53,13 +51,14 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - uses: tauri-apps/tauri-action@v1
+      # Verify the exact commit being released before building anything.
+      - name: Cargo test
+        working-directory: src-tauri
+        run: cargo test
+
+      - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: 'Solyn ${{ github.ref_name }}'
-          releaseDraft: false
-          prerelease: false
-          retryAttempts: 2
-          args: ${{ matrix.args }}
+          args: ${{ matrix.bundle_args }}
+          releaseId: ${{ github.event.release.id }}
