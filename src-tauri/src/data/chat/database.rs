@@ -20,6 +20,7 @@ pub struct ChatMessage {
     pub session_id: i64,
     pub role: String,
     pub content: String,
+    pub thinking: Option<String>,
     pub created_at: String,
 }
 
@@ -71,11 +72,33 @@ impl ChatDatabase {
                 session_id INTEGER NOT NULL,
                 role TEXT NOT NULL,
                 content TEXT NOT NULL,
+                thinking TEXT,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
             )",
             [],
         ).map_err(|e| e.to_string())?;
+
+        // Add thinking column to databases created before reasoning was stored
+        let has_thinking = {
+            let mut stmt = conn
+                .prepare("PRAGMA table_info(chat_messages)")
+                .map_err(|e| e.to_string())?;
+            let mut rows = stmt.query([]).map_err(|e| e.to_string())?;
+            let mut found = false;
+            while let Some(row) = rows.next().map_err(|e| e.to_string())? {
+                let name: String = row.get(1).map_err(|e| e.to_string())?;
+                if name == "thinking" {
+                    found = true;
+                    break;
+                }
+            }
+            found
+        };
+        if !has_thinking {
+            conn.execute("ALTER TABLE chat_messages ADD COLUMN thinking TEXT", [])
+                .map_err(|e| e.to_string())?;
+        }
         
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_messages_session ON chat_messages(session_id)",
@@ -183,7 +206,7 @@ impl ChatDatabase {
     }
     
     // Message operations
-    pub async fn add_message(&self, session_id: i64, role: &str, content: &str) -> Result<i64, String> {
+    pub async fn add_message(&self, session_id: i64, role: &str, content: &str, thinking: Option<&str>) -> Result<i64, String> {
         let conn = self.conn.lock().await;
         // Update session updated_at
         conn.execute(
@@ -192,8 +215,8 @@ impl ChatDatabase {
         ).map_err(|e| e.to_string())?;
         
         conn.execute(
-            "INSERT INTO chat_messages (session_id, role, content) VALUES (?1, ?2, ?3)",
-            params![session_id, role, content],
+            "INSERT INTO chat_messages (session_id, role, content, thinking) VALUES (?1, ?2, ?3, ?4)",
+            params![session_id, role, content, thinking],
         ).map_err(|e| e.to_string())?;
         
         Ok(conn.last_insert_rowid())
@@ -202,7 +225,7 @@ impl ChatDatabase {
     pub async fn get_messages_for_session(&self, session_id: i64) -> Result<Vec<ChatMessage>, String> {
         let conn = self.conn.lock().await;
         let mut stmt = conn.prepare(
-            "SELECT id, session_id, role, content, created_at 
+            "SELECT id, session_id, role, content, thinking, created_at 
              FROM chat_messages 
              WHERE session_id = ?1 
              ORDER BY created_at ASC"
@@ -214,7 +237,8 @@ impl ChatDatabase {
                 session_id: row.get(1)?,
                 role: row.get(2)?,
                 content: row.get(3)?,
-                created_at: row.get(4)?,
+                thinking: row.get(4)?,
+                created_at: row.get(5)?,
             })
         }).map_err(|e| e.to_string())?;
         
@@ -228,7 +252,7 @@ impl ChatDatabase {
     pub async fn get_messages_for_session_since(&self, session_id: i64, since: i64) -> Result<Vec<ChatMessage>, String> {
         let conn = self.conn.lock().await;
         let mut stmt = conn.prepare(
-            "SELECT id, session_id, role, content, created_at 
+            "SELECT id, session_id, role, content, thinking, created_at 
              FROM chat_messages 
              WHERE session_id = ?1 AND id > ?2
              ORDER BY created_at ASC"
@@ -240,7 +264,8 @@ impl ChatDatabase {
                 session_id: row.get(1)?,
                 role: row.get(2)?,
                 content: row.get(3)?,
-                created_at: row.get(4)?,
+                thinking: row.get(4)?,
+                created_at: row.get(5)?,
             })
         }).map_err(|e| e.to_string())?;
         
@@ -249,5 +274,44 @@ impl ChatDatabase {
             messages.push(row.map_err(|e| e.to_string())?);
         }
         Ok(messages)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn migrates_old_messages_table_without_thinking() {
+        let conn = Connection::open_in_memory().unwrap();
+        // Simulate a database created before reasoning was stored
+        conn.execute(
+            "CREATE TABLE chat_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id INTEGER NOT NULL,
+                role TEXT NOT NULL,
+                content TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO chat_messages (session_id, role, content) VALUES (1, 'user', 'hi')",
+            [],
+        )
+        .unwrap();
+
+        ChatDatabase::initialize_database(&conn).unwrap();
+
+        let (content, thinking): (String, Option<String>) = conn
+            .query_row(
+                "SELECT content, thinking FROM chat_messages WHERE id = 1",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(content, "hi");
+        assert_eq!(thinking, None);
     }
 }

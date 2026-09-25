@@ -7,6 +7,7 @@ import { useChatStore } from "@/stores/chatStore";
 export interface ChatMessage {
   role: "user" | "assistant" | "system";
   content: string;
+  thinking?: string;
 }
 
 export interface ChatModelData {
@@ -17,6 +18,7 @@ export interface ChatModelData {
 
 export const useChat = (modelData: ChatModelData | undefined) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [modelLoaded, setModelLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const {
     currentSessionId,
@@ -210,6 +212,37 @@ export const useChat = (modelData: ChatModelData | undefined) => {
         );
         unlistenRefs.current.push(unlistenChunk);
 
+        // Listen for streaming reasoning chunks
+        const unlistenThinking = await listen<{ chunk: string }>(
+          "chat-stream-thinking",
+          (event) => {
+            const thinking = event.payload.chunk;
+
+            const currentMessages = useChatStore.getState().currentMessages;
+            const updatedMessages = [...currentMessages];
+            const lastIndex = updatedMessages.length - 1;
+
+            if (
+              lastIndex >= 0 &&
+              updatedMessages[lastIndex].role === "assistant"
+            ) {
+              updatedMessages[lastIndex] = {
+                ...updatedMessages[lastIndex],
+                thinking,
+              };
+              useChatStore.getState().setCurrentMessages(updatedMessages);
+            }
+          },
+        );
+        unlistenRefs.current.push(unlistenThinking);
+
+        // Listen for cold/warm model status (whether model had to be loaded)
+        const unlistenModelStatus = await listen<{ loaded: boolean }>(
+          "chat-stream-model-status",
+          (event) => setModelLoaded(event.payload.loaded),
+        );
+        unlistenRefs.current.push(unlistenModelStatus);
+
         // Listen for stream completion
         const unlistenDone = await listen("chat-stream-done", () => {
           setIsLoading(false);
@@ -218,10 +251,11 @@ export const useChat = (modelData: ChatModelData | undefined) => {
         unlistenRefs.current.push(unlistenDone);
 
         // Listen for stream complete with final response
-        const unlistenComplete = await listen<{ response: string }>(
-          "chat-stream-complete",
-          (event) => {
-            const response = event.payload.response;
+        const unlistenComplete = await listen<{
+          response: string;
+          thinking?: string;
+        }>("chat-stream-complete", (event) => {
+            const { response, thinking } = event.payload;
 
             // Ensure the final response is in the store
             const currentMessages = useChatStore.getState().currentMessages;
@@ -232,11 +266,17 @@ export const useChat = (modelData: ChatModelData | undefined) => {
               lastIndex >= 0 &&
               updatedMessages[lastIndex].role === "assistant"
             ) {
-              // If the content is different, update it
-              if (updatedMessages[lastIndex].content !== response) {
+              // If the content or reasoning is different, update it
+              const nextThinking =
+                thinking ?? updatedMessages[lastIndex].thinking;
+              if (
+                updatedMessages[lastIndex].content !== response ||
+                updatedMessages[lastIndex].thinking !== nextThinking
+              ) {
                 updatedMessages[lastIndex] = {
                   ...updatedMessages[lastIndex],
                   content: response,
+                  thinking: nextThinking,
                 };
                 useChatStore.getState().setCurrentMessages(updatedMessages);
               }
@@ -280,6 +320,7 @@ export const useChat = (modelData: ChatModelData | undefined) => {
     messages: currentMessages,
     isLoading,
     isStreaming: useChatStore.getState().isStreaming,
+    modelLoaded,
     error,
     isOllamaReady,
     currentSessionId,

@@ -4,30 +4,61 @@ import { MarkdownMessage } from "./MarkdownMessage";
 
 interface ChatMessagesProps {
   messages: ChatMessage[];
-  isLoading: boolean;
   isStreaming: boolean;
+  modelLoaded: boolean;
   error: string | null;
   isOllamaReady: boolean;
 }
 
 export const ChatMessages = ({
   messages,
-  isLoading,
   isStreaming,
+  modelLoaded,
   error,
   isOllamaReady: _isOllamaReady,
 }: ChatMessagesProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const autoScrollRef = useRef(true);
+  const prevCountRef = useRef(messages.length);
+  const hasMessages = messages.length > 0;
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  // Follow the bottom only while the user is already near it
+  useEffect(() => {
+    const end = messagesEndRef.current;
+    if (!end) return;
+
+    let container: HTMLElement | null = end.parentElement;
+    while (container) {
+      const overflowY = getComputedStyle(container).overflowY;
+      if (overflowY === "auto" || overflowY === "scroll") break;
+      container = container.parentElement;
+    }
+    const scrollParent = container;
+    if (!scrollParent) return;
+
+    const onScroll = () => {
+      autoScrollRef.current =
+        scrollParent.scrollHeight -
+          scrollParent.scrollTop -
+          scrollParent.clientHeight <
+        120;
+    };
+    onScroll();
+    scrollParent.addEventListener("scroll", onScroll, { passive: true });
+    return () => scrollParent.removeEventListener("scroll", onScroll);
+  }, [hasMessages]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    const grew = messages.length > prevCountRef.current;
+    prevCountRef.current = messages.length;
+    if (!autoScrollRef.current && !grew) return;
+    if (grew) autoScrollRef.current = true;
+    messagesEndRef.current?.scrollIntoView({
+      behavior: isStreaming ? "auto" : "smooth",
+    });
+  }, [messages, isStreaming]);
 
-  if (messages.length === 0) {
+  if (!hasMessages) {
     return null;
   }
 
@@ -40,6 +71,7 @@ export const ChatMessages = ({
           message.content === "";
 
         const isUser = message.role === "user";
+        const hasThinking = !isUser && !!message.thinking;
 
         return (
           <div
@@ -59,20 +91,28 @@ export const ChatMessages = ({
                 </div>
               ) : (
                 <div>
-                  {isEmptyAssistant && isStreaming ? (
-                    <div className="flex space-x-1">
-                      <div
-                        className="w-2 h-2 bg-purple-accent/60 rounded-full animate-bounce"
-                        style={{ animationDelay: "0ms" }}
-                      />
-                      <div
-                        className="w-2 h-2 bg-purple-accent/60 rounded-full animate-bounce"
-                        style={{ animationDelay: "200ms" }}
-                      />
-                      <div
-                        className="w-2 h-2 bg-purple-accent/60 rounded-full animate-bounce"
-                        style={{ animationDelay: "400ms" }}
-                      />
+                  {hasThinking && (
+                    <details
+                      open={message.content === ""}
+                      className="mb-3 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/50"
+                    >
+                      <summary className="cursor-pointer select-none text-white/40 hover:text-white/70">
+                        <span className="inline-flex items-center gap-2">
+                          Thinking
+                          {isEmptyAssistant && isStreaming && (
+                            <span className="inline-block w-3 h-3 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" />
+                          )}
+                        </span>
+                      </summary>
+                      <div className="mt-2 whitespace-pre-wrap break-words">
+                        {message.thinking}
+                      </div>
+                    </details>
+                  )}
+                  {isEmptyAssistant && isStreaming && !hasThinking ? (
+                    <div className="flex items-center gap-2 text-sm text-white/50">
+                      <span className="inline-block w-3 h-3 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" />
+                      {modelLoaded ? "Thinking" : "Loading model"}
                     </div>
                   ) : (
                     <MarkdownMessage
@@ -86,27 +126,6 @@ export const ChatMessages = ({
           </div>
         );
       })}
-
-      {isLoading && !isStreaming && messages.length > 0 && (
-        <div className="flex justify-start">
-          <div className="w-full max-w-4xl">
-            <div className="flex space-x-1">
-              <div
-                className="w-2 h-2 bg-purple-accent/60 rounded-full animate-bounce"
-                style={{ animationDelay: "0ms" }}
-              />
-              <div
-                className="w-2 h-2 bg-purple-accent/60 rounded-full animate-bounce"
-                style={{ animationDelay: "200ms" }}
-              />
-              <div
-                className="w-2 h-2 bg-purple-accent/60 rounded-full animate-bounce"
-                style={{ animationDelay: "400ms" }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
 
       {error && (
         <div className="flex justify-center">
