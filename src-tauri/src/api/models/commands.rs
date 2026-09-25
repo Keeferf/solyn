@@ -239,6 +239,7 @@ pub async fn test_chat_with_model(
                 ChatMessage {
                     role: "user".to_string(),
                     content: message,
+                    thinking: None,
                 }
             ];
             

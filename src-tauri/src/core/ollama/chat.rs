@@ -8,6 +8,8 @@ use tokio_stream::StreamExt;
 pub struct ChatMessage {
     pub role: String,
     pub content: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thinking: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -15,6 +17,8 @@ pub struct ChatRequest {
     pub model: String,
     pub messages: Vec<ChatMessage>,
     pub stream: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub think: Option<bool>,
     pub options: Option<ChatOptions>,
 }
 
@@ -42,6 +46,7 @@ pub struct ChatResponse {
 #[derive(Debug, Clone)]
 pub enum ChatEvent {
     MessageChunk(String),
+    ThinkingChunk(String),
     Done(ChatResponse),
     Error(String),
 }
@@ -91,6 +96,7 @@ impl OllamaChatClient {
             model: model_name.to_string(),
             messages,
             stream: true,
+            think: None,
             options,
         };
 
@@ -120,6 +126,7 @@ impl OllamaChatClient {
                     let mut stream = Box::pin(stream);
                     let mut buffer = String::new();
                     let mut full_content = String::new();
+                    let mut full_thinking = String::new();
                     let mut final_response: Option<ChatResponse> = None;
                     
                     while let Some(chunk_result) = stream.next().await {
@@ -149,6 +156,14 @@ impl OllamaChatClient {
                                             continue;
                                         }
                                         if let Ok(chunk) = serde_json::from_str::<ChatResponse>(line) {
+                                            // Accumulate reasoning and stream it as it arrives
+                                            if let Some(thinking) = chunk.message.thinking.as_deref() {
+                                                if !thinking.is_empty() {
+                                                    full_thinking.push_str(thinking);
+                                                    let _ = tx.send(ChatEvent::ThinkingChunk(full_thinking.clone()));
+                                                }
+                                            }
+
                                             // Accumulate content
                                             if !chunk.message.content.is_empty() {
                                                 full_content.push_str(&chunk.message.content);
@@ -184,6 +199,11 @@ impl OllamaChatClient {
                     // Send the done event with the complete response
                     if let Some(mut chunk) = final_response {
                         chunk.message.content = full_content;
+                        chunk.message.thinking = if full_thinking.is_empty() {
+                            None
+                        } else {
+                            Some(full_thinking)
+                        };
                         let _ = tx.send(ChatEvent::Done(chunk));
                     } else {
                         // If we didn't get a proper done response, create one
@@ -191,6 +211,11 @@ impl OllamaChatClient {
                             message: ChatMessage {
                                 role: "assistant".to_string(),
                                 content: full_content,
+                                thinking: if full_thinking.is_empty() {
+                                    None
+                                } else {
+                                    Some(full_thinking)
+                                },
                             },
                             done: true,
                             total_duration: None,
@@ -226,6 +251,7 @@ impl OllamaChatClient {
             model: model_name.to_string(),
             messages,
             stream: false,
+            think: None,
             options,
         };
 
