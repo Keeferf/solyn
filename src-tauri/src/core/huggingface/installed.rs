@@ -5,6 +5,7 @@ use tokio::fs;
 use tauri::{AppHandle, Manager};
 
 use super::utils::{extract_parameter_count, extract_quantization};
+use crate::core::ollama::models::OllamaModelClient;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InstalledModelFile {
@@ -161,6 +162,27 @@ async fn scan_model_directory(dir_path: &PathBuf) -> Option<InstalledModel> {
     })
 }
 
+/// Ollama model names that correspond to a downloaded GGUF file.
+/// Must match the naming used in `generate_modelfile` / `get_chat_models`.
+fn ollama_model_names(model_id: &str, filename: &str) -> Vec<String> {
+    let base = model_id.replace("/", "_");
+    let name = match extract_quantization(filename) {
+        Some(quantization) => format!("{}_{}", base, quantization),
+        None => base,
+    };
+    vec![name.clone(), format!("{}:latest", name)]
+}
+
+/// Unregister the Ollama model(s) for a GGUF file. Best-effort: the model may
+/// already be gone or Ollama may be offline, neither of which should block
+/// deleting the local file.
+async fn remove_ollama_model(model_id: &str, filename: &str) {
+    let client = OllamaModelClient::new();
+    for name in ollama_model_names(model_id, filename) {
+        let _ = client.delete_model(&name).await;
+    }
+}
+
 /// Delete an installed model and its files
 pub async fn delete_installed_model(app_handle: &AppHandle, model_id: &str) -> Result<(), String> {
     let app_dir = app_handle
@@ -175,10 +197,30 @@ pub async fn delete_installed_model(app_handle: &AppHandle, model_id: &str) -> R
         return Err(format!("Model directory not found: {}", model_id));
     }
     
+    // Collect the GGUF filenames before removing the directory so the
+    // matching Ollama models can be unregistered too.
+    let mut gguf_files = Vec::new();
+    let mut entries = fs::read_dir(&model_dir)
+        .await
+        .map_err(|e| format!("Failed to read model directory: {}", e))?;
+    while let Some(entry) = entries.next_entry().await
+        .map_err(|e| format!("Failed to read directory entry: {}", e))? 
+    {
+        if let Some(name) = entry.file_name().to_str() {
+            if name.ends_with(".gguf") {
+                gguf_files.push(name.to_string());
+            }
+        }
+    }
+    
     // Remove the entire directory
     fs::remove_dir_all(&model_dir)
         .await
         .map_err(|e| format!("Failed to delete model: {}", e))?;
+    
+    for filename in &gguf_files {
+        remove_ollama_model(model_id, filename).await;
+    }
     
     Ok(())
 }
@@ -210,6 +252,8 @@ pub async fn delete_model_file(
     fs::remove_file(&file_path)
         .await
         .map_err(|e| format!("Failed to delete file: {}", e))?;
+    
+    remove_ollama_model(model_id, filename).await;
     
     // Also delete associated Modelfile if it exists (always "Modelfile" now)
     let modelfile_name = "Modelfile".to_string();
@@ -283,6 +327,8 @@ pub async fn delete_model_quantization(
                         .await
                         .map_err(|e| format!("Failed to delete file {}: {}", filename, e))?;
                     
+                    remove_ollama_model(model_id, filename).await;
+                    
                     // Delete associated Modelfile (always "Modelfile" now)
                     let modelfile_name = "Modelfile".to_string();
                     let modelfile_path = model_dir.join(&modelfile_name);
@@ -317,4 +363,33 @@ pub async fn delete_model_quantization(
     }
     
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ollama_model_names;
+
+    #[test]
+    fn ollama_names_include_quantization_and_latest() {
+        let names = ollama_model_names(
+            "ornith-ai/Ornith-1.5-9B-GGUF",
+            "Ornith-1.5-9B-Q8_0.gguf",
+        );
+        assert_eq!(
+            names,
+            vec![
+                "ornith-ai_Ornith-1.5-9B-GGUF_Q8_0".to_string(),
+                "ornith-ai_Ornith-1.5-9B-GGUF_Q8_0:latest".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn ollama_names_fall_back_to_base_without_quantization() {
+        let names = ollama_model_names("author/model", "model.gguf");
+        assert_eq!(
+            names,
+            vec!["author_model".to_string(), "author_model:latest".to_string()]
+        );
+    }
 }
