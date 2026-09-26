@@ -3,12 +3,12 @@ use tauri::{AppHandle, Manager};
 
 #[tauri::command]
 pub fn get_platform_info() -> String {
-    crate::helpers::platform_detector::detect_operating_system()
+    crate::core::platform::detector::detect_operating_system()
 }
 
 #[tauri::command]
 pub async fn get_platform_info_detailed(_app_handle: AppHandle) -> Result<PlatformInfo, String> {
-    let os = crate::helpers::platform_detector::detect_operating_system();
+    let os = crate::core::platform::detector::detect_operating_system();
 
     let arch = std::env::consts::ARCH.to_string();
 

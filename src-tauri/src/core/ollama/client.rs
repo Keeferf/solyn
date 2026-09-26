@@ -1,5 +1,5 @@
 use crate::data::download_state::InstallationInformation;
-use crate::helpers::platform_detector::detect_operating_system;
+use crate::core::platform::detector::detect_operating_system;
 use reqwest;
 use serde_json;
 use std::time::Duration;
