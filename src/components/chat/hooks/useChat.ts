@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { useOllama } from "@/contexts/OllamaContext";
-import { useChatStore } from "@/stores/chatStore";
+import { useChatStore, SessionSettings } from "@/stores/chatStore";
 
 export interface ChatMessage {
   role: "user" | "assistant" | "system";
@@ -16,7 +16,10 @@ export interface ChatModelData {
   ollama_model_name: string;
 }
 
-export const useChat = (modelData: ChatModelData | undefined) => {
+export const useChat = (
+  modelData: ChatModelData | undefined,
+  settings: SessionSettings,
+) => {
   const [isLoading, setIsLoading] = useState(false);
   const [modelLoaded, setModelLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +39,7 @@ export const useChat = (modelData: ChatModelData | undefined) => {
   } = useChatStore();
 
   const unlistenRefs = useRef<UnlistenFn[]>([]);
+  const inFlightRef = useRef(false);
   const { isReady } = useOllama();
   const isOllamaReady = isReady;
   const currentMessagesRef = useRef(currentMessages);
@@ -82,6 +86,11 @@ export const useChat = (modelData: ChatModelData | undefined) => {
 
     setError(null);
     setStoreError(null);
+
+    // Guard against a second submit racing between click and re-render.
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
+
     setIsLoading(true);
     setStreaming(true);
 
@@ -102,46 +111,31 @@ export const useChat = (modelData: ChatModelData | undefined) => {
         setStoreError(errorMsg);
         setIsLoading(false);
         setStreaming(false);
+        inFlightRef.current = false;
         return;
       }
     }
 
-    // Add user message to Zustand store
+    // Optimistic UI: show the user turn and an empty assistant placeholder.
+    // The backend owns the transcript (send_chat_stream persists both turns),
+    // so we do not write the user message from here.
     const userMessage: ChatMessage = { role: "user", content: content.trim() };
-
-    // Update local state first
-    setCurrentMessages([...currentMessagesRef.current, userMessage]);
-
-    // Then save to database
-    try {
-      await invoke("add_message_to_session", {
-        sessionId,
-        message: {
-          role: userMessage.role,
-          content: userMessage.content,
-        },
-      });
-    } catch (err) {
-      // Don't block the flow if saving fails
-    }
-
-    // Add empty assistant message
     const assistantMessage: ChatMessage = { role: "assistant", content: "" };
-    setCurrentMessages([...currentMessagesRef.current, assistantMessage]);
+    const nextMessages = [
+      ...currentMessagesRef.current,
+      userMessage,
+      assistantMessage,
+    ];
+    currentMessagesRef.current = nextMessages;
+    setCurrentMessages(nextMessages);
 
     try {
-      // Get all messages for the chat history
-      const chatHistory = currentMessagesRef.current.map((msg) => ({
-        role: msg.role,
-        content: msg.content,
-      }));
-
-
       await invoke("send_chat_stream", {
         request: {
           model: modelData.ollama_model_name,
-          messages: chatHistory,
+          message: content.trim(),
           session_id: sessionId,
+          settings,
         },
       });
 
@@ -161,8 +155,11 @@ export const useChat = (modelData: ChatModelData | undefined) => {
         messages[messages.length - 1].content === ""
       ) {
         const updatedMessages = messages.slice(0, -1);
+        currentMessagesRef.current = updatedMessages;
         setCurrentMessages(updatedMessages);
       }
+    } finally {
+      inFlightRef.current = false;
     }
   };
 
