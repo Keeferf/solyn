@@ -40,7 +40,7 @@ pub fn extract_quantization(filename: &str) -> Option<String> {
         r"f16",
         r"f32",
     ];
-    
+
     for pattern in patterns {
         if let Ok(re) = regex::Regex::new(&format!(r"(?i){}", pattern)) {
             if let Some(caps) = re.captures(&name) {
@@ -64,7 +64,7 @@ pub fn extract_quantization(filename: &str) -> Option<String> {
             }
         }
     }
-    
+
     None
 }
 
@@ -83,19 +83,89 @@ pub fn ollama_model_name(model_id: &str, quantization: Option<&str>) -> String {
     }
 }
 
+/// True when an Ollama tag belongs to the same model id, i.e. shares the
+/// `author_model` prefix, optionally followed by a `:` tag or `_` quantization
+/// suffix. The delimiter check keeps sibling model ids (which differ by `-` or
+/// other characters) from matching.
+fn is_same_model_family(ollama_name: &str, prefix: &str) -> bool {
+    ollama_name == prefix
+        || ollama_name.starts_with(&format!("{}:", prefix))
+        || ollama_name.starts_with(&format!("{}_", prefix))
+}
+
+/// Resolve which actual Ollama tag corresponds to a downloaded GGUF file.
+///
+/// Exact name matches win. When none is found — e.g. a model registered under an
+/// older quantization-detection scheme, so the file derives `Q4_K_M` but Ollama
+/// holds `Q4_K_` — fall back to any Ollama model sharing the same model id and
+/// use its real tag. Returns `None` when nothing matches.
+pub fn resolve_ollama_model_name(
+    ollama_models: &[String],
+    model_id: &str,
+    quantization: &str,
+) -> Option<String> {
+    let base = ollama_model_name(model_id, Some(quantization));
+
+    if let Some(m) = ollama_models
+        .iter()
+        .find(|m| **m == format!("{}:latest", base))
+    {
+        return Some(m.clone());
+    }
+    if let Some(m) = ollama_models.iter().find(|m| **m == base) {
+        return Some(m.clone());
+    }
+
+    let prefix = ollama_model_name(model_id, None);
+    let quant_upper = quantization.to_ascii_uppercase();
+    let family: Vec<&String> = ollama_models
+        .iter()
+        .filter(|m| is_same_model_family(m, &prefix))
+        .collect();
+
+    // Prefer a family member whose name contains the expected quantization,
+    // otherwise take the first — the exact case is already handled above.
+    family
+        .iter()
+        .find(|m| m.to_ascii_uppercase().contains(&quant_upper))
+        .map(|m| (*m).clone())
+        .or_else(|| family.first().map(|m| (*m).clone()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn parameter_count_matches_common_sizes() {
-        assert_eq!(extract_parameter_count("llama-2-70b.Q4_K_M.gguf").as_deref(), Some("70B"));
-        assert_eq!(extract_parameter_count("vicuna-13b.gguf").as_deref(), Some("13B"));
-        assert_eq!(extract_parameter_count("phi-125m.gguf").as_deref(), Some("125M"));
-        assert_eq!(extract_parameter_count("wizardlm-3b.gguf").as_deref(), Some("3B"));
-        assert_eq!(extract_parameter_count("tinyllama-1.1b.gguf").as_deref(), Some("1.1B"));
-        assert_eq!(extract_parameter_count("qwen2.5-3b.gguf").as_deref(), Some("3B"));
-        assert_eq!(extract_parameter_count("llava-v1.5-13b.gguf").as_deref(), Some("13B"));
+        assert_eq!(
+            extract_parameter_count("llama-2-70b.Q4_K_M.gguf").as_deref(),
+            Some("70B")
+        );
+        assert_eq!(
+            extract_parameter_count("vicuna-13b.gguf").as_deref(),
+            Some("13B")
+        );
+        assert_eq!(
+            extract_parameter_count("phi-125m.gguf").as_deref(),
+            Some("125M")
+        );
+        assert_eq!(
+            extract_parameter_count("wizardlm-3b.gguf").as_deref(),
+            Some("3B")
+        );
+        assert_eq!(
+            extract_parameter_count("tinyllama-1.1b.gguf").as_deref(),
+            Some("1.1B")
+        );
+        assert_eq!(
+            extract_parameter_count("qwen2.5-3b.gguf").as_deref(),
+            Some("3B")
+        );
+        assert_eq!(
+            extract_parameter_count("llava-v1.5-13b.gguf").as_deref(),
+            Some("13B")
+        );
     }
 
     #[test]
@@ -113,12 +183,30 @@ mod tests {
 
     #[test]
     fn quantization_handles_common_variants_case_insensitively() {
-        assert_eq!(extract_quantization("model.Q8_0.gguf").as_deref(), Some("Q8_0"));
-        assert_eq!(extract_quantization("model.q4_0.gguf").as_deref(), Some("Q4_0"));
-        assert_eq!(extract_quantization("model-q5_k_m.gguf").as_deref(), Some("Q5_K_M"));
-        assert_eq!(extract_quantization("model-f16.gguf").as_deref(), Some("F16"));
-        assert_eq!(extract_quantization("model-f32.gguf").as_deref(), Some("F32"));
-        assert_eq!(extract_quantization("model.IQ2_XS.gguf").as_deref(), Some("IQ2_XS"));
+        assert_eq!(
+            extract_quantization("model.Q8_0.gguf").as_deref(),
+            Some("Q8_0")
+        );
+        assert_eq!(
+            extract_quantization("model.q4_0.gguf").as_deref(),
+            Some("Q4_0")
+        );
+        assert_eq!(
+            extract_quantization("model-q5_k_m.gguf").as_deref(),
+            Some("Q5_K_M")
+        );
+        assert_eq!(
+            extract_quantization("model-f16.gguf").as_deref(),
+            Some("F16")
+        );
+        assert_eq!(
+            extract_quantization("model-f32.gguf").as_deref(),
+            Some("F32")
+        );
+        assert_eq!(
+            extract_quantization("model.IQ2_XS.gguf").as_deref(),
+            Some("IQ2_XS")
+        );
     }
 
     #[test]
@@ -139,5 +227,37 @@ mod tests {
         assert_eq!(ollama_model_name("a/b", None), "a_b");
         assert_eq!(ollama_model_name("a/b", Some("")), "a_b");
         assert_eq!(ollama_model_name("a/b", Some("default")), "a_b");
+    }
+
+    #[test]
+    fn resolve_prefers_exact_registered_name() {
+        let models = vec![
+            "Qwen_Qwen2.5-Coder-14B-Instruct-GGUF_Q4_K_M:latest".to_string(),
+            "other_model_Q4_K_M:latest".to_string(),
+        ];
+        assert_eq!(
+            resolve_ollama_model_name(&models, "Qwen/Qwen2.5-Coder-14B-Instruct-GGUF", "Q4_K_M"),
+            Some("Qwen_Qwen2.5-Coder-14B-Instruct-GGUF_Q4_K_M:latest".to_string())
+        );
+    }
+
+    #[test]
+    fn resolve_falls_back_to_same_family_on_quantization_drift() {
+        // Regression: file derives Q4_K_M, but the model was imported under the
+        // older `Q4_K_` name that Solyn created before the extraction fix.
+        let models = vec!["Qwen_Qwen2.5-Coder-14B-Instruct-GGUF_Q4_K_:latest".to_string()];
+        assert_eq!(
+            resolve_ollama_model_name(&models, "Qwen/Qwen2.5-Coder-14B-Instruct-GGUF", "Q4_K_M"),
+            Some("Qwen_Qwen2.5-Coder-14B-Instruct-GGUF_Q4_K_:latest".to_string())
+        );
+    }
+
+    #[test]
+    fn resolve_does_not_match_a_sibling_model_id() {
+        let models = vec!["acme_model-extra_Q4_K_M:latest".to_string()];
+        assert_eq!(
+            resolve_ollama_model_name(&models, "acme/model", "Q4_K_M"),
+            None
+        );
     }
 }

@@ -62,7 +62,7 @@ impl OllamaChatClient {
         Self {
             client: reqwest::Client::builder()
                 .timeout(Duration::from_secs(300))
-                .pool_max_idle_per_host(1)  // Keep connection alive for reuse
+                .pool_max_idle_per_host(1) // Keep connection alive for reuse
                 .build()
                 .unwrap_or_default(),
             base_url: "http://localhost:11434".to_string(),
@@ -71,7 +71,8 @@ impl OllamaChatClient {
 
     /// Check if Ollama is running
     pub async fn check_health(&self) -> Result<bool, String> {
-        let response = self.client
+        let response = self
+            .client
             .get(&format!("{}/api/version", self.base_url))
             .timeout(Duration::from_secs(2))
             .send()
@@ -91,7 +92,7 @@ impl OllamaChatClient {
         options: Option<ChatOptions>,
     ) -> Result<mpsc::UnboundedReceiver<ChatEvent>, String> {
         let url = format!("{}/api/chat", self.base_url);
-        
+
         let request = ChatRequest {
             model: model_name.to_string(),
             messages,
@@ -103,9 +104,8 @@ impl OllamaChatClient {
         let (tx, rx) = mpsc::unbounded_channel();
 
         let client = self.client.clone();
-        
+
         tokio::spawn(async move {
-            
             let response = client
                 .post(&url)
                 .json(&request)
@@ -128,19 +128,17 @@ impl OllamaChatClient {
                     let mut full_content = String::new();
                     let mut full_thinking = String::new();
                     let mut final_response: Option<ChatResponse> = None;
-                    
+
                     while let Some(chunk_result) = stream.next().await {
                         match chunk_result {
                             Ok(bytes) => {
                                 if let Ok(text) = String::from_utf8(bytes.to_vec()) {
                                     buffer.push_str(&text);
-                                    
+
                                     // Process complete lines
-                                    let lines: Vec<String> = buffer
-                                        .lines()
-                                        .map(|s| s.to_string())
-                                        .collect();
-                                    
+                                    let lines: Vec<String> =
+                                        buffer.lines().map(|s| s.to_string()).collect();
+
                                     // Keep any incomplete line in buffer
                                     if let Some(last_line) = lines.last() {
                                         if !text.ends_with('\n') && !text.is_empty() {
@@ -149,38 +147,51 @@ impl OllamaChatClient {
                                             buffer.clear();
                                         }
                                     }
-                                    
+
                                     // Process complete lines
                                     for line in lines.iter() {
                                         if line.is_empty() {
                                             continue;
                                         }
-                                        if let Ok(chunk) = serde_json::from_str::<ChatResponse>(line) {
+                                        if let Ok(chunk) =
+                                            serde_json::from_str::<ChatResponse>(line)
+                                        {
                                             // Accumulate reasoning and stream it as it arrives
-                                            if let Some(thinking) = chunk.message.thinking.as_deref() {
+                                            if let Some(thinking) =
+                                                chunk.message.thinking.as_deref()
+                                            {
                                                 if !thinking.is_empty() {
                                                     full_thinking.push_str(thinking);
-                                                    let _ = tx.send(ChatEvent::ThinkingChunk(full_thinking.clone()));
+                                                    let _ = tx.send(ChatEvent::ThinkingChunk(
+                                                        full_thinking.clone(),
+                                                    ));
                                                 }
                                             }
 
                                             // Accumulate content
                                             if !chunk.message.content.is_empty() {
                                                 full_content.push_str(&chunk.message.content);
-                                                
+
                                                 // ✅ FIX: Send chunk immediately as it arrives
-                                                let _ = tx.send(ChatEvent::MessageChunk(full_content.clone()));
+                                                let _ = tx.send(ChatEvent::MessageChunk(
+                                                    full_content.clone(),
+                                                ));
                                             }
-                                            
+
                                             // Store the final response when done
                                             if chunk.done {
                                                 final_response = Some(chunk);
                                             }
                                         } else {
                                             // Try to parse as error response
-                                            if let Ok(json) = serde_json::from_str::<serde_json::Value>(line) {
-                                                if let Some(error) = json.get("error").and_then(|e| e.as_str()) {
-                                                    let _ = tx.send(ChatEvent::Error(error.to_string()));
+                                            if let Ok(json) =
+                                                serde_json::from_str::<serde_json::Value>(line)
+                                            {
+                                                if let Some(error) =
+                                                    json.get("error").and_then(|e| e.as_str())
+                                                {
+                                                    let _ = tx
+                                                        .send(ChatEvent::Error(error.to_string()));
                                                     return;
                                                 }
                                             }
@@ -195,7 +206,7 @@ impl OllamaChatClient {
                             }
                         }
                     }
-                    
+
                     // Send the done event with the complete response
                     if let Some(mut chunk) = final_response {
                         chunk.message.content = full_content;
@@ -246,7 +257,7 @@ impl OllamaChatClient {
         options: Option<ChatOptions>,
     ) -> Result<ChatResponse, String> {
         let url = format!("{}/api/chat", self.base_url);
-        
+
         let request = ChatRequest {
             model: model_name.to_string(),
             messages,
@@ -255,8 +266,8 @@ impl OllamaChatClient {
             options,
         };
 
-
-        let response = self.client
+        let response = self
+            .client
             .post(&url)
             .json(&request)
             .timeout(Duration::from_secs(300))
@@ -265,7 +276,8 @@ impl OllamaChatClient {
             .map_err(|e| format!("Failed to send chat: {}", e))?;
 
         if response.status().is_success() {
-            let chat_response: ChatResponse = response.json()
+            let chat_response: ChatResponse = response
+                .json()
                 .await
                 .map_err(|e| format!("Failed to parse response: {}", e))?;
             Ok(chat_response)

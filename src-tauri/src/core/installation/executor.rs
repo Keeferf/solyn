@@ -1,9 +1,11 @@
+use crate::core::ollama::client::{fetch_ollama_version, is_ollama_installed, start_ollama};
+use crate::helpers::terminal_output_cleaner::{
+    broadcast_terminal_line, parse_and_emit_terminal_output,
+};
+use std::time::Duration;
 use tauri;
 use tauri::Manager;
 use tauri_plugin_shell::ShellExt;
-use std::time::Duration;
-use crate::helpers::terminal_output_cleaner::{broadcast_terminal_line, parse_and_emit_terminal_output};
-use crate::core::ollama::client::{is_ollama_installed, start_ollama, fetch_ollama_version};
 
 pub async fn execute_ollama_installation(
     app_handle: &tauri::AppHandle,
@@ -20,7 +22,10 @@ pub async fn execute_ollama_installation(
     let (shell_cmd, shell_args): (String, Vec<String>) = match platform {
         "windows" => (
             "powershell".to_string(),
-            vec!["-c".to_string(), "irm https://ollama.com/install.ps1 | iex".to_string()],
+            vec![
+                "-c".to_string(),
+                "irm https://ollama.com/install.ps1 | iex".to_string(),
+            ],
         ),
         "linux" => {
             let script_path = write_install_script()
@@ -41,7 +46,12 @@ pub async fn execute_ollama_installation(
         _ => return Err("Unsupported platform".to_string()),
     };
 
-    broadcast_terminal_line(&window_clone, &format!("Running installer for {}", platform), "info", false);
+    broadcast_terminal_line(
+        &window_clone,
+        &format!("Running installer for {}", platform),
+        "info",
+        false,
+    );
 
     let (mut rx, _child) = shell
         .command(&shell_cmd)
@@ -80,26 +90,41 @@ pub async fn execute_ollama_installation(
         // not authenticate (e.g. no polkit agent). Either way, surface the
         // manual command instead of pretending the install worked.
         if matches!(exit_code, Some(126) | Some(127)) {
-            broadcast_terminal_line(&window_clone, "🔒 Could not show the system authentication dialog.", "error", false);
-            broadcast_terminal_line(&window_clone, &format!("Run this in a terminal, then restart Solyn:\n  {}", manual_install_command()), "info", false);
+            broadcast_terminal_line(
+                &window_clone,
+                "🔒 Could not show the system authentication dialog.",
+                "error",
+                false,
+            );
+            broadcast_terminal_line(
+                &window_clone,
+                &format!(
+                    "Run this in a terminal, then restart Solyn:\n  {}",
+                    manual_install_command()
+                ),
+                "info",
+                false,
+            );
             return Err("Ollama installation requires administrator privileges".to_string());
         }
 
         return Err(format!(
             "Ollama installation failed (exit code {}). Check the terminal log for details.",
-            exit_code.map(|code| code.to_string()).unwrap_or_else(|| "unknown".to_string())
+            exit_code
+                .map(|code| code.to_string())
+                .unwrap_or_else(|| "unknown".to_string())
         ));
     }
 
     broadcast_terminal_line(window, "Verifying Ollama installation...", "info", false);
-    
+
     let max_attempts = 15;
     let mut attempts = 0;
-    
+
     while attempts < max_attempts {
         tokio::time::sleep(Duration::from_secs(2)).await;
         attempts += 1;
-        
+
         match is_ollama_installed().await {
             Ok(true) => {
                 broadcast_terminal_line(window, "Ollama verified and running", "success", false);
@@ -107,29 +132,60 @@ pub async fn execute_ollama_installation(
             }
             Ok(false) => {
                 if attempts < max_attempts && attempts % 3 == 0 {
-                    broadcast_terminal_line(window, &format!("Waiting for Ollama to start... (attempt {}/{})", attempts, max_attempts), "info", false);
+                    broadcast_terminal_line(
+                        window,
+                        &format!(
+                            "Waiting for Ollama to start... (attempt {}/{})",
+                            attempts, max_attempts
+                        ),
+                        "info",
+                        false,
+                    );
                 }
             }
             Err(_e) => {
                 if attempts < max_attempts && attempts % 3 == 0 {
-                    broadcast_terminal_line(window, &format!("Checking Ollama status... (attempt {}/{})", attempts, max_attempts), "info", false);
+                    broadcast_terminal_line(
+                        window,
+                        &format!(
+                            "Checking Ollama status... (attempt {}/{})",
+                            attempts, max_attempts
+                        ),
+                        "info",
+                        false,
+                    );
                 }
             }
         }
     }
-    
+
     // Final verification check
-    broadcast_terminal_line(window, "Performing final verification check...", "info", false);
+    broadcast_terminal_line(
+        window,
+        "Performing final verification check...",
+        "info",
+        false,
+    );
     tokio::time::sleep(Duration::from_secs(2)).await;
-    
+
     match is_ollama_installed().await {
         Ok(true) => {
             broadcast_terminal_line(window, "✓ Ollama verified and running!", "success", false);
             Ok(())
         }
         _ => {
-            broadcast_terminal_line(window, "⚠️ Ollama installed but could not be verified.", "info", false);
-            broadcast_terminal_line(window, "💡 Try starting Ollama manually, then refresh.", "info", false);
+            broadcast_terminal_line(
+                window,
+                "⚠️ Ollama installed but could not be verified.",
+                "info",
+                false,
+            );
+            broadcast_terminal_line(
+                window,
+                "💡 Try starting Ollama manually, then refresh.",
+                "info",
+                false,
+            );
             Err("Ollama installation could not be verified".to_string())
         }
     }
@@ -144,18 +200,20 @@ pub async fn execute_ollama_update(
 ) -> Result<(), String> {
     let window_clone = window.clone();
     let shell = app_handle.shell();
-    
+
     // Get current version for logging
     let current_version = match fetch_ollama_version().await {
         Ok(v) => v,
         Err(_) => "unknown".to_string(),
     };
-    
-    broadcast_terminal_line(&window_clone, 
-        &format!("🔄 Updating Ollama from version {}...", current_version), 
-        "info", false
+
+    broadcast_terminal_line(
+        &window_clone,
+        &format!("🔄 Updating Ollama from version {}...", current_version),
+        "info",
+        false,
     );
-    
+
     // Build the update command. On Linux the stock package-manager path is
     // unreliable: apt/pacman/snap only work for package-managed installs (the
     // official installer drops a binary in /usr/local/bin).
@@ -181,9 +239,11 @@ pub async fn execute_ollama_update(
                     .await
                     .map_err(|e| format!("Failed to prepare update script: {}", e))?;
 
-                broadcast_terminal_line(&window_clone,
+                broadcast_terminal_line(
+                    &window_clone,
                     "🔒 Opening a terminal for the sudo password...",
-                    "info", false
+                    "info",
+                    false,
                 );
                 broadcast_terminal_line(&window_clone,
                     "Complete the password prompt in the window that opens; Solyn will continue automatically.",
@@ -196,16 +256,21 @@ pub async fn execute_ollama_update(
             } else {
                 // Run the update script as the current user; it elevates with
                 // `sudo -n` and exits 42 when that isn't possible.
-                ("sh".to_string(), vec!["-c".to_string(), linux_update_script()])
+                (
+                    "sh".to_string(),
+                    vec!["-c".to_string(), linux_update_script()],
+                )
             }
         }
         _ => return Err("Unsupported platform".to_string()),
     };
 
     if !launched_in_terminal {
-        broadcast_terminal_line(&window_clone,
+        broadcast_terminal_line(
+            &window_clone,
             &format!("📦 Running update for {}...", platform),
-            "info", false
+            "info",
+            false,
         );
 
         let (mut rx, _child) = shell
@@ -244,9 +309,11 @@ pub async fn execute_ollama_update(
 
         if exit_code != Some(0) {
             if exit_code == Some(42) {
-                broadcast_terminal_line(&window_clone,
+                broadcast_terminal_line(
+                    &window_clone,
                     "🔒 Updating Ollama needs root, and no passwordless sudo is available.",
-                    "error", false
+                    "error",
+                    false,
                 );
                 broadcast_terminal_line(&window_clone,
                     "Run this in a terminal, then restart Solyn:\n  curl -fsSL https://ollama.com/install.sh | sudo sh && sudo systemctl restart ollama",
@@ -266,18 +333,22 @@ pub async fn execute_ollama_update(
 
     // Verify the update was successful
     broadcast_terminal_line(window, "🔍 Verifying Ollama update...", "info", false);
-    
+
     // Wait for the update to complete. The WSL terminal hand-off needs longer:
     // the user has to finish the sudo prompt and the installer has to download,
     // so allow up to ~3 minutes before giving up on a version change.
-    let (max_attempts, unchanged_deadline) = if launched_in_terminal { (90, 60) } else { (25, 15) };
+    let (max_attempts, unchanged_deadline) = if launched_in_terminal {
+        (90, 60)
+    } else {
+        (25, 15)
+    };
     let mut attempts = 0;
     let mut ollama_started = false;
-    
+
     while attempts < max_attempts {
         tokio::time::sleep(Duration::from_secs(2)).await;
         attempts += 1;
-        
+
         // Check if Ollama is installed
         match is_ollama_installed().await {
             Ok(true) => {
@@ -285,9 +356,11 @@ pub async fn execute_ollama_update(
                 match fetch_ollama_version().await {
                     Ok(version) => {
                         if version != current_version {
-                            broadcast_terminal_line(window, 
-                                &format!("✅ Ollama updated successfully to version {}", version), 
-                                "success", false
+                            broadcast_terminal_line(
+                                window,
+                                &format!("✅ Ollama updated successfully to version {}", version),
+                                "success",
+                                false,
                             );
                             return Ok(());
                         } else if attempts > unchanged_deadline {
@@ -296,36 +369,58 @@ pub async fn execute_ollama_update(
                             // but the process was never restarted (common on
                             // WSL/containers without systemd). Don't claim
                             // success.
-                            broadcast_terminal_line(window,
-                                &format!("⚠️ Ollama still reports version {} after the update.", version),
-                                "error", false
+                            broadcast_terminal_line(
+                                window,
+                                &format!(
+                                    "⚠️ Ollama still reports version {} after the update.",
+                                    version
+                                ),
+                                "error",
+                                false,
                             );
-                            broadcast_terminal_line(window,
+                            broadcast_terminal_line(
+                                window,
                                 "💡 Restart Ollama (or your WSL distro), then retry.",
-                                "info", false
+                                "info",
+                                false,
                             );
                             return Err(
                                 "Ollama update did not change the running version. Restart Ollama, then retry.".to_string()
                             );
                         } else if attempts % 3 == 0 {
-                            broadcast_terminal_line(window, 
-                                &format!("⏳ Waiting for version change... (attempt {}/{})", attempts, max_attempts), 
-                                "info", false
+                            broadcast_terminal_line(
+                                window,
+                                &format!(
+                                    "⏳ Waiting for version change... (attempt {}/{})",
+                                    attempts, max_attempts
+                                ),
+                                "info",
+                                false,
                             );
                         }
                     }
                     Err(_) => {
                         // Try to start Ollama if it's not running
                         if !ollama_started && attempts % 3 == 0 {
-                            broadcast_terminal_line(window, "🚀 Attempting to start Ollama...", "info", false);
+                            broadcast_terminal_line(
+                                window,
+                                "🚀 Attempting to start Ollama...",
+                                "info",
+                                false,
+                            );
                             let _ = start_ollama(app_handle).await;
                             ollama_started = true;
                         }
-                        
+
                         if attempts < max_attempts && attempts % 3 == 0 {
-                            broadcast_terminal_line(window, 
-                                &format!("⏳ Waiting for Ollama to start... (attempt {}/{})", attempts, max_attempts), 
-                                "info", false
+                            broadcast_terminal_line(
+                                window,
+                                &format!(
+                                    "⏳ Waiting for Ollama to start... (attempt {}/{})",
+                                    attempts, max_attempts
+                                ),
+                                "info",
+                                false,
                             );
                         }
                     }
@@ -333,62 +428,92 @@ pub async fn execute_ollama_update(
             }
             Ok(false) => {
                 if attempts < max_attempts && attempts % 3 == 0 {
-                    broadcast_terminal_line(window, 
-                        &format!("⏳ Waiting for Ollama installation... (attempt {}/{})", attempts, max_attempts), 
-                        "info", false
+                    broadcast_terminal_line(
+                        window,
+                        &format!(
+                            "⏳ Waiting for Ollama installation... (attempt {}/{})",
+                            attempts, max_attempts
+                        ),
+                        "info",
+                        false,
                     );
                 }
             }
             Err(_e) => {
                 if attempts < max_attempts && attempts % 3 == 0 {
-                    broadcast_terminal_line(window, 
-                        &format!("⏳ Checking Ollama status... (attempt {}/{})", attempts, max_attempts), 
-                        "info", false
+                    broadcast_terminal_line(
+                        window,
+                        &format!(
+                            "⏳ Checking Ollama status... (attempt {}/{})",
+                            attempts, max_attempts
+                        ),
+                        "info",
+                        false,
                     );
                 }
             }
         }
     }
-    
+
     // Final verification with one last attempt
     broadcast_terminal_line(window, "🔍 Performing final verification...", "info", false);
     tokio::time::sleep(Duration::from_secs(3)).await;
-    
+
     // Try one more time to start Ollama
     if !ollama_started {
-        broadcast_terminal_line(window, "🚀 One final attempt to start Ollama...", "info", false);
+        broadcast_terminal_line(
+            window,
+            "🚀 One final attempt to start Ollama...",
+            "info",
+            false,
+        );
         let _ = start_ollama(app_handle).await;
         tokio::time::sleep(Duration::from_secs(3)).await;
     }
-    
+
     match fetch_ollama_version().await {
         Ok(version) => {
-            broadcast_terminal_line(window, 
-                &format!("✅ Ollama updated to version {}", version), 
-                "success", false
+            broadcast_terminal_line(
+                window,
+                &format!("✅ Ollama updated to version {}", version),
+                "success",
+                false,
             );
             Ok(())
         }
         Err(_) => {
-            broadcast_terminal_line(window, "⚠️ Update finished but Ollama is not responding.", "info", false);
-            broadcast_terminal_line(window, "💡 Try starting Ollama manually, then refresh.", "info", false);
+            broadcast_terminal_line(
+                window,
+                "⚠️ Update finished but Ollama is not responding.",
+                "info",
+                false,
+            );
+            broadcast_terminal_line(
+                window,
+                "💡 Try starting Ollama manually, then refresh.",
+                "info",
+                false,
+            );
             Err("Ollama did not come back up after the update".to_string())
         }
     }
 }
 
 /// Save installation log
-pub async fn save_installation_log(app_handle: &tauri::AppHandle, log_content: &str) -> Result<std::path::PathBuf, String> {
+pub async fn save_installation_log(
+    app_handle: &tauri::AppHandle,
+    log_content: &str,
+) -> Result<std::path::PathBuf, String> {
     use tokio::fs;
-    
+
     let app_dir = app_handle
         .path()
         .app_data_dir()
         .map_err(|e| format!("Failed to get app data directory: {}", e))?;
-    
+
     let log_dir = app_dir.join("logs");
     let log_path = log_dir.join("ollama_install.log");
-    
+
     if let Some(parent) = log_path.parent() {
         if !parent.exists() {
             fs::create_dir_all(parent)
@@ -396,25 +521,28 @@ pub async fn save_installation_log(app_handle: &tauri::AppHandle, log_content: &
                 .map_err(|e| format!("Failed to create log directory: {}", e))?;
         }
     }
-    
+
     let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
-    let formatted_log = format!("[{}] Installation Log\n{}\n{}\n", 
-        timestamp, 
+    let formatted_log = format!(
+        "[{}] Installation Log\n{}\n{}\n",
+        timestamp,
         "=".repeat(50),
         log_content
     );
-    
+
     fs::write(&log_path, formatted_log)
         .await
         .map_err(|e| format!("Failed to write log file: {}", e))?;
-    
+
     Ok(log_path)
 }
 
 /// Get installation recommendation based on platform
 pub fn get_installation_recommendation(platform: &str) -> String {
     match platform {
-        "windows" => "Download the Ollama installer from https://ollama.com/download/windows".to_string(),
+        "windows" => {
+            "Download the Ollama installer from https://ollama.com/download/windows".to_string()
+        }
         "linux" => "Follow the instructions at https://ollama.com/download/linux".to_string(),
         _ => "Visit https://ollama.com for installation instructions".to_string(),
     }
@@ -512,7 +640,12 @@ fn launch_wsl_update_terminal(script_path: &std::path::Path) -> Result<(), Strin
         args.push("-d".to_string());
         args.push(distro);
     }
-    args.extend(["-e".to_string(), "sudo".to_string(), "sh".to_string(), script]);
+    args.extend([
+        "-e".to_string(),
+        "sudo".to_string(),
+        "sh".to_string(),
+        script,
+    ]);
 
     // The absolute path covers `appendWindowsPath=false`.
     let candidates: [(&str, Vec<String>); 2] = [
@@ -533,9 +666,11 @@ fn launch_wsl_update_terminal(script_path: &std::path::Path) -> Result<(), Strin
         }
     }
 
-    Err("Could not open a terminal to request administrator privileges. \
+    Err(
+        "Could not open a terminal to request administrator privileges. \
          Run the update in a terminal instead."
-        .to_string())
+            .to_string(),
+    )
 }
 
 /// Write the Ollama install script to a temp file. The elevated helper
@@ -593,25 +728,25 @@ pub async fn check_package_manager_ollama() -> Result<bool, String> {
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .output();
-    
+
     if let Ok(output) = apt_check {
         if output.status.success() {
             return Ok(true);
         }
     }
-    
+
     let pacman_check = std::process::Command::new("pacman")
         .args(&["-Q", "ollama"])
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .output();
-    
+
     if let Ok(output) = pacman_check {
         if output.status.success() {
             return Ok(true);
         }
     }
-    
+
     Ok(false)
 }
 

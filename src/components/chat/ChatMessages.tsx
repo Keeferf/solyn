@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { ChatMessage } from "./hooks/useChat";
 import { MarkdownMessage } from "./MarkdownMessage";
+import { RingSpinner } from "../ui/RingSpinner";
 
 interface ChatMessagesProps {
   messages: ChatMessage[];
@@ -100,7 +101,7 @@ export const ChatMessages = ({
                         <span className="inline-flex items-center gap-2">
                           Thinking
                           {isEmptyAssistant && isStreaming && (
-                            <span className="inline-block w-3 h-3 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" />
+                            <RingSpinner size={12} />
                           )}
                         </span>
                       </summary>
@@ -111,7 +112,7 @@ export const ChatMessages = ({
                   )}
                   {isEmptyAssistant && isStreaming && !hasThinking ? (
                     <div className="flex items-center gap-2 text-sm text-white/50">
-                      <span className="inline-block w-3 h-3 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" />
+                      <RingSpinner size={12} />
                       {modelLoaded ? "Thinking" : "Loading model"}
                     </div>
                   ) : (

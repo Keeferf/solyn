@@ -1,5 +1,6 @@
-import { X, Loader, CircleCheck, CircleAlert } from "lucide-react";
+import { X, CircleCheck, CircleAlert } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
+import { RingSpinner } from "../ui/RingSpinner";
 
 interface DownloadStatusDisplayProps {
   modelId: string;
@@ -57,24 +58,18 @@ export const DownloadStatusDisplay = ({
     } catch {}
   };
 
-  const StatusIcon = () => {
-    if (isComplete)
-      return <CircleCheck className="text-success shrink-0" size={16} />;
-    if (isError)
-      return <CircleAlert className="text-error shrink-0" size={16} />;
-    if (isCancelled)
-      return <CircleAlert className="text-warning shrink-0" size={16} />;
-    if (isProcessing)
-      return <Loader className="animate-spin text-info shrink-0" size={16} />;
-    if (isStarting || isActive)
-      return (
-        <Loader
-          className="animate-spin text-purple-accent shrink-0"
-          size={16}
-        />
-      );
-    return null;
-  };
+  const statusIcon = isComplete ? (
+    <CircleCheck className="text-success shrink-0" size={16} />
+  ) : isError ? (
+    <CircleAlert className="text-error shrink-0" size={16} />
+  ) : isCancelled ? (
+    <CircleAlert className="text-warning shrink-0" size={16} />
+  ) : isProcessing || isStarting || isActive ? (
+    <RingSpinner
+      size={16}
+      className="border-2 border-purple-accent/25 border-t-purple-accent"
+    />
+  ) : null;
 
   const showCancelButton = isActive && !isComplete && !isError && !isCancelled;
   const isIndeterminate = isProcessing && !isOllamaCreation;
@@ -83,7 +78,7 @@ export const DownloadStatusDisplay = ({
     <div className="bg-black/50 rounded-lg border border-white/10 p-4">
       <div className="flex items-center justify-between mb-1">
         <div className="flex-1 min-w-0 flex items-center gap-2">
-          <StatusIcon />
+          {statusIcon}
           <span className="font-inter text-white text-base truncate">
             {displayName}
           </span>

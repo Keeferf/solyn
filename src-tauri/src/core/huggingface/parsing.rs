@@ -1,37 +1,38 @@
-use serde_json;
-use crate::data::huggingface_model_types::GGUFFileInfo;
 use super::utils::{extract_parameter_count, extract_quantization};
+use crate::data::huggingface_model_types::GGUFFileInfo;
+use serde_json;
 
 pub fn extract_gguf_files(siblings: Option<&Vec<serde_json::Value>>) -> Vec<GGUFFileInfo> {
     let mut gguf_files = Vec::new();
-    
+
     if let Some(siblings) = siblings {
         for file in siblings {
-            let filename = file["rfilename"].as_str()
+            let filename = file["rfilename"]
+                .as_str()
                 .or_else(|| file["filename"].as_str())
                 .unwrap_or("");
-            
+
             if filename.ends_with(".gguf") {
-                let size = file["size"].as_u64()
+                let size = file["size"]
+                    .as_u64()
                     .or_else(|| file["file_size"].as_u64())
-                    .or_else(|| {
-                        file["file"]["size"].as_u64()
-                    })
+                    .or_else(|| file["file"]["size"].as_u64())
                     .unwrap_or(0);
 
-                let model_id = file.get("model_id")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("");
-                
+                let model_id = file.get("model_id").and_then(|v| v.as_str()).unwrap_or("");
+
                 let url = if !model_id.is_empty() {
-                    format!("https://huggingface.co/{}/resolve/main/{}", model_id, filename)
+                    format!(
+                        "https://huggingface.co/{}/resolve/main/{}",
+                        model_id, filename
+                    )
                 } else {
                     format!("https://huggingface.co/resolve/main/{}", filename)
                 };
 
                 let parameter_count = extract_parameter_count(filename);
                 let quantization = extract_quantization(filename);
-                
+
                 gguf_files.push(GGUFFileInfo {
                     filename: filename.to_string(),
                     size,
@@ -42,7 +43,7 @@ pub fn extract_gguf_files(siblings: Option<&Vec<serde_json::Value>>) -> Vec<GGUF
             }
         }
     }
-    
+
     gguf_files.sort_by(|a, b| b.size.cmp(&a.size));
     gguf_files
 }
@@ -83,7 +84,10 @@ mod tests {
     #[test]
     fn reads_sizes_from_all_supported_fields() {
         let out = extract_gguf_files(Some(&siblings()));
-        let big = out.iter().find(|f| f.filename == "model-big-Q8_0.gguf").unwrap();
+        let big = out
+            .iter()
+            .find(|f| f.filename == "model-big-Q8_0.gguf")
+            .unwrap();
         assert_eq!(big.size, 500); // file_size
         let nested = out.iter().find(|f| f.filename == "nested.gguf").unwrap();
         assert_eq!(nested.size, 100); // file.size
@@ -92,7 +96,10 @@ mod tests {
     #[test]
     fn builds_url_with_and_without_model_id() {
         let out = extract_gguf_files(Some(&siblings()));
-        let with_id = out.iter().find(|f| f.filename == "model-small-Q4_K_M.gguf").unwrap();
+        let with_id = out
+            .iter()
+            .find(|f| f.filename == "model-small-Q4_K_M.gguf")
+            .unwrap();
         assert_eq!(
             with_id.url,
             "https://huggingface.co/author/repo/resolve/main/model-small-Q4_K_M.gguf"
@@ -107,7 +114,10 @@ mod tests {
     #[test]
     fn extracts_parameter_count_and_quantization() {
         let out = extract_gguf_files(Some(&siblings()));
-        let small = out.iter().find(|f| f.filename == "model-small-Q4_K_M.gguf").unwrap();
+        let small = out
+            .iter()
+            .find(|f| f.filename == "model-small-Q4_K_M.gguf")
+            .unwrap();
         assert_eq!(small.quantization.as_deref(), Some("Q4_K_M"));
         assert_eq!(small.parameter_count, None);
     }

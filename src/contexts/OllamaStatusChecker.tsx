@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { useOllama } from "../contexts/OllamaContext";
-import { OllamaDownloadPage } from "@/components/OllamaDownloadPage";
+import { useOllama } from "@/contexts/OllamaContext";
+import { OllamaDownloadPage } from "@/components/ollama/OllamaDownloadPage";
 import {
   Download,
   ExternalLink,

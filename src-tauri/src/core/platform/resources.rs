@@ -61,12 +61,12 @@ pub struct SystemInfo {
 pub fn get_system_resources() -> SystemResources {
     let mut sys = System::new_all();
     sys.refresh_all();
-    
+
     let memory = get_memory_info(&sys);
     let cpu = get_cpu_info(&sys);
     let disk = get_disk_info();
     let system = get_system_info();
-    
+
     SystemResources {
         memory,
         cpu,
@@ -85,7 +85,7 @@ pub fn get_memory_info(sys: &System) -> MemoryInfo {
     } else {
         0.0
     };
-    
+
     MemoryInfo {
         total,
         used,
@@ -101,10 +101,10 @@ pub fn get_memory_info(sys: &System) -> MemoryInfo {
 pub fn get_cpu_info(sys: &System) -> CpuInfo {
     let cores = sys.cpus().len();
     let usage = sys.global_cpu_usage();
-    
+
     // Get frequency from first CPU if available
     let frequency = sys.cpus().first().map(|cpu| cpu.frequency());
-    
+
     // Get brand from first CPU if available
     let brand = sys.cpus().first().and_then(|cpu| {
         let brand_str = cpu.brand();
@@ -114,7 +114,7 @@ pub fn get_cpu_info(sys: &System) -> CpuInfo {
             Some(brand_str.to_string())
         }
     });
-    
+
     CpuInfo {
         cores,
         usage,
@@ -148,7 +148,7 @@ pub fn get_system_info() -> SystemInfo {
     let os_version = System::os_version().map(|s| s.to_string());
     let uptime = System::uptime();
     let hostname = System::host_name().map(|s| s.to_string());
-    
+
     SystemInfo {
         name,
         kernel_version,
@@ -164,12 +164,12 @@ fn format_bytes(bytes: u64) -> String {
     const UNITS: [&str; 6] = ["B", "KB", "MB", "GB", "TB", "PB"];
     let mut size = bytes as f64;
     let mut unit_index = 0;
-    
+
     while size >= 1024.0 && unit_index < UNITS.len() - 1 {
         size /= 1024.0;
         unit_index += 1;
     }
-    
+
     if unit_index == 0 {
         format!("{} {}", size as u64, UNITS[unit_index])
     } else {
@@ -182,7 +182,7 @@ fn format_uptime(seconds: u64) -> String {
     let days = seconds / 86400;
     let hours = (seconds % 86400) / 3600;
     let minutes = (seconds % 3600) / 60;
-    
+
     if days > 0 {
         format!("{}d {}h {}m", days, hours, minutes)
     } else if hours > 0 {
@@ -199,10 +199,10 @@ pub fn get_quick_resources() -> serde_json::Value {
     let mut sys = System::new_all();
     sys.refresh_memory();
     sys.refresh_cpu_all();
-    
+
     let memory = get_memory_info(&sys);
     let cpu = get_cpu_info(&sys);
-    
+
     serde_json::json!({
         "memory": {
             "total": memory.total_formatted,
@@ -219,19 +219,17 @@ pub fn get_quick_resources() -> serde_json::Value {
 }
 
 /// Check if system has enough resources for a model
-pub fn check_model_compatibility(
-    model_size_gb: f64,
-) -> Result<ModelCompatibility, String> {
+pub fn check_model_compatibility(model_size_gb: f64) -> Result<ModelCompatibility, String> {
     let mut sys = System::new_all();
     sys.refresh_memory();
-    
+
     let total_memory = sys.total_memory() as f64 / (1024.0 * 1024.0 * 1024.0); // Convert to GB
     let available_memory = sys.available_memory() as f64 / (1024.0 * 1024.0 * 1024.0);
-    
+
     // Check if there's enough memory
     let enough_memory = available_memory >= model_size_gb * 1.5; // 1.5x buffer for overhead
     let recommended_memory = model_size_gb * 1.5;
-    
+
     let status = if enough_memory {
         "sufficient".to_string()
     } else if available_memory >= model_size_gb {
@@ -239,7 +237,7 @@ pub fn check_model_compatibility(
     } else {
         "insufficient".to_string()
     };
-    
+
     Ok(ModelCompatibility {
         enough_memory,
         total_memory_gb: total_memory,
