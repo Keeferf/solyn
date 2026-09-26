@@ -1,15 +1,13 @@
 // src/core/installation/verifier.rs
-use crate::core::ollama::client::{is_ollama_installed, is_ollama_running, fetch_ollama_version};
+use crate::core::ollama::client::{fetch_ollama_version, is_ollama_installed, is_ollama_running};
 
 /// Quick verification - just check if Ollama is installed and running
 pub async fn quick_verify_ollama() -> Result<bool, String> {
     match is_ollama_installed().await {
-        Ok(true) => {
-            match is_ollama_running().await {
-                Ok(true) => Ok(true),
-                _ => Ok(false),
-            }
-        }
+        Ok(true) => match is_ollama_running().await {
+            Ok(true) => Ok(true),
+            _ => Ok(false),
+        },
         _ => Ok(false),
     }
 }
@@ -30,13 +28,13 @@ pub async fn verify_ollama_with_details() -> Result<OllamaVerificationStatus, St
     } else {
         false
     };
-    
+
     let version = if is_running {
         fetch_ollama_version().await.ok()
     } else {
         None
     };
-    
+
     Ok(OllamaVerificationStatus {
         is_installed,
         is_running,

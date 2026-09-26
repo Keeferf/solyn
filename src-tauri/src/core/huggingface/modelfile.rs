@@ -1,6 +1,6 @@
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tokio::fs;
-use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelFileConfig {
@@ -32,7 +32,6 @@ pub async fn write_modelfile(
     let filename = get_modelfile_name();
     let path = model_dir.join(filename);
 
-
     fs::write(&path, content)
         .await
         .map_err(|e| format!("Failed writing Modelfile: {}", e))?;
@@ -53,11 +52,11 @@ pub async fn write_metadata(
     let mut metadata = HashMap::new();
     metadata.insert("model_id".to_string(), model_id.to_string());
     metadata.insert("filename".to_string(), gguf_filename.to_string());
-    
+
     if let Some(quant) = quantization {
         metadata.insert("quantization".to_string(), quant);
     }
-    
+
     if let Some(params) = parameter_count {
         metadata.insert("parameter_count".to_string(), params);
     }

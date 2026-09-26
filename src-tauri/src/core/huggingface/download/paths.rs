@@ -32,7 +32,8 @@ impl ModelPaths {
 
     /// Get chunk file path for a specific chunk index
     pub fn chunk_path(&self, filename: &str, chunk_index: usize) -> PathBuf {
-        self.model_dir.join(format!("{}.part.{}", filename, chunk_index))
+        self.model_dir
+            .join(format!("{}.part.{}", filename, chunk_index))
     }
 }
 

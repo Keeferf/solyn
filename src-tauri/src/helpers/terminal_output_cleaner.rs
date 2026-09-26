@@ -1,10 +1,10 @@
-use tauri::WebviewWindow;
-use tauri::Emitter;
 use crate::data::download_state::TerminalLine;
+use tauri::Emitter;
+use tauri::WebviewWindow;
 
 pub fn sanitize_output_line(line: &str) -> String {
     let trimmed = line.trim();
-    
+
     let cleaned = trimmed
         .trim_start_matches("> ")
         .trim_start_matches(">>> ")
@@ -13,10 +13,10 @@ pub fn sanitize_output_line(line: &str) -> String {
         .trim_start_matches("# ")
         .trim_start_matches("VERBOSE: ");
 
-    if cleaned.is_empty() 
-        || cleaned == ">" 
-        || cleaned == ">>>" 
-        || cleaned == ">>" 
+    if cleaned.is_empty()
+        || cleaned == ">"
+        || cleaned == ">>>"
+        || cleaned == ">>"
         || cleaned.contains("Install complete. Run 'ollama' from the command line.")
         || cleaned.contains("Run 'ollama' from the command line.")
         || cleaned.contains("Install complete.")
@@ -25,7 +25,7 @@ pub fn sanitize_output_line(line: &str) -> String {
     {
         return String::new();
     }
-    
+
     cleaned.to_string()
 }
 
@@ -34,20 +34,20 @@ pub fn remove_ansi_escape_codes(text: &str) -> String {
     let mut chars = text.chars().peekable();
     let mut in_escape = false;
     let mut in_bracket = false;
-    
+
     while let Some(c) = chars.next() {
         if c == '\x1b' {
             in_escape = true;
             in_bracket = false;
             continue;
         }
-        
+
         if in_escape {
             if c == '[' {
                 in_bracket = true;
                 continue;
             }
-            
+
             if in_bracket {
                 if c.is_ascii_alphabetic() || c == '@' {
                     in_escape = false;
@@ -65,13 +65,13 @@ pub fn remove_ansi_escape_codes(text: &str) -> String {
             result.push(c);
         }
     }
-    
+
     result
 }
 
 pub fn parse_and_emit_terminal_output(window: &WebviewWindow, text: &str, stream_type: &str) {
     let mut current_line = String::new();
-    
+
     for ch in text.chars() {
         match ch {
             '\r' => {
@@ -99,7 +99,7 @@ pub fn parse_and_emit_terminal_output(window: &WebviewWindow, text: &str, stream
             }
         }
     }
-    
+
     if !current_line.is_empty() {
         let stripped = remove_ansi_escape_codes(&current_line);
         let cleaned = sanitize_output_line(&stripped);
@@ -109,17 +109,25 @@ pub fn parse_and_emit_terminal_output(window: &WebviewWindow, text: &str, stream
     }
 }
 
-pub fn broadcast_terminal_line(window: &WebviewWindow, line: &str, stream_type: &str, is_progress: bool) {
+pub fn broadcast_terminal_line(
+    window: &WebviewWindow,
+    line: &str,
+    stream_type: &str,
+    is_progress: bool,
+) {
     let cleaned_line = sanitize_output_line(line);
     if cleaned_line.is_empty() {
         return;
     }
-    
-    let _ = window.emit("terminal-output", TerminalLine {
-        line: cleaned_line,
-        stream: stream_type.to_string(),
-        is_progress,
-    });
+
+    let _ = window.emit(
+        "terminal-output",
+        TerminalLine {
+            line: cleaned_line,
+            stream: stream_type.to_string(),
+            is_progress,
+        },
+    );
 }
 
 #[cfg(test)]
@@ -154,7 +162,10 @@ mod tests {
 
     #[test]
     fn keeps_meaningful_lines() {
-        assert_eq!(sanitize_output_line("Downloading model"), "Downloading model");
+        assert_eq!(
+            sanitize_output_line("Downloading model"),
+            "Downloading model"
+        );
     }
 
     #[test]

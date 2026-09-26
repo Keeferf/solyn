@@ -1,18 +1,18 @@
+use once_cell::sync::Lazy;
 use std::collections::HashMap;
-use std::sync::Mutex;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
-use once_cell::sync::Lazy;
+use std::sync::Mutex;
 
-use crate::data::huggingface_model_types::{HFModelSummary, HFModelDetails, ModelFilter};
+use crate::data::huggingface_model_types::{HFModelDetails, HFModelSummary, ModelFilter};
 
-static MODEL_DETAILS_CACHE: Lazy<Mutex<HashMap<String, HFModelDetails>>> = 
+static MODEL_DETAILS_CACHE: Lazy<Mutex<HashMap<String, HFModelDetails>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
 
-static GGUF_MODELS_CACHE: Lazy<Mutex<HashMap<ModelFilter, Vec<HFModelSummary>>>> = 
+static GGUF_MODELS_CACHE: Lazy<Mutex<HashMap<ModelFilter, Vec<HFModelSummary>>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
 
-static SEARCH_CACHE: Lazy<Mutex<HashMap<String, Vec<HFModelSummary>>>> = 
+static SEARCH_CACHE: Lazy<Mutex<HashMap<String, Vec<HFModelSummary>>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
 
 pub struct Cache;
@@ -55,14 +55,14 @@ impl Cache {
         } else {
             cache.clear();
         }
-        
+
         let mut search_cache = SEARCH_CACHE.lock().unwrap();
         search_cache.clear();
     }
 }
 
 // Download cancellation tokens
-static DOWNLOAD_CANCELLATION_TOKENS: Lazy<Mutex<HashMap<String, Arc<AtomicBool>>>> = 
+static DOWNLOAD_CANCELLATION_TOKENS: Lazy<Mutex<HashMap<String, Arc<AtomicBool>>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
 
 pub fn generate_download_id(model_id: &str, filename: &str) -> String {

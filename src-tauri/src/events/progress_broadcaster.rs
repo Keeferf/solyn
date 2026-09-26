@@ -1,6 +1,6 @@
-use tauri::WebviewWindow;
-use tauri::Emitter;
 use crate::data::download_state::{DownloadProgress, DownloadStatus, ModelAcquisitionProgress};
+use tauri::Emitter;
+use tauri::WebviewWindow;
 
 pub fn broadcast_download_progress(
     window: &WebviewWindow,
@@ -12,7 +12,11 @@ pub fn broadcast_download_progress(
     let progress_data = DownloadProgress {
         status,
         progress,
-        message: if message.is_empty() { "Processing...".to_string() } else { message },
+        message: if message.is_empty() {
+            "Processing...".to_string()
+        } else {
+            message
+        },
         log: log.map(|s| s.to_string()),
     };
 
@@ -33,6 +37,6 @@ pub fn broadcast_model_acquisition_progress(
         progress: progress as f64,
         message: message.to_string(),
     };
-    
+
     let _ = window.emit("model-download-progress", progress_data);
 }

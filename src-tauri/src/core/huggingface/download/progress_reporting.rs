@@ -32,15 +32,18 @@ pub fn send_completion_event(
     model_name: &str,
     ollama_created: bool,
 ) {
-    let _ = app_handle.emit("model-download-complete", &serde_json::json!({
-        "model_id": model_id,
-        "filename": filename,
-        "path": file_path,
-        "modelfile_path": modelfile_path,
-        "quantization": quantization,
-        "ollama_model_name": model_name,
-        "ollama_created": ollama_created,
-    }));
+    let _ = app_handle.emit(
+        "model-download-complete",
+        &serde_json::json!({
+            "model_id": model_id,
+            "filename": filename,
+            "path": file_path,
+            "modelfile_path": modelfile_path,
+            "quantization": quantization,
+            "ollama_model_name": model_name,
+            "ollama_created": ollama_created,
+        }),
+    );
 }
 
 /// Send Ollama creation event
@@ -51,12 +54,15 @@ pub fn send_ollama_created_event(
     quantization: &str,
     attempt: usize,
 ) {
-    let _ = app_handle.emit("ollama-model-created", &serde_json::json!({
-        "model_name": model_name,
-        "model_id": model_id,
-        "quantization": quantization,
-        "attempt": attempt,
-    }));
+    let _ = app_handle.emit(
+        "ollama-model-created",
+        &serde_json::json!({
+            "model_name": model_name,
+            "model_id": model_id,
+            "quantization": quantization,
+            "attempt": attempt,
+        }),
+    );
 }
 
 /// Send Ollama failure event
@@ -67,10 +73,13 @@ pub fn send_ollama_failed_event(
     error: &str,
     attempts: usize,
 ) {
-    let _ = app_handle.emit("ollama-model-creation-failed", &serde_json::json!({
-        "model_name": model_name,
-        "model_id": model_id,
-        "error": error,
-        "attempts": attempts,
-    }));
+    let _ = app_handle.emit(
+        "ollama-model-creation-failed",
+        &serde_json::json!({
+            "model_name": model_name,
+            "model_id": model_id,
+            "error": error,
+            "attempts": attempts,
+        }),
+    );
 }
