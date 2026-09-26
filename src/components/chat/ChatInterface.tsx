@@ -1,6 +1,7 @@
 // src/components/chat/ChatInterface.tsx
 import { useState, useEffect } from "react";
 import { X, Plus, Pen, Trash } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
 import { ChatInput } from "./ChatInput";
 import { ChatControls } from "./ChatControls";
 import { ChatMessages } from "./ChatMessages";
@@ -8,14 +9,11 @@ import { useChatInput } from "./hooks/useChatInput";
 import { useFileAttachment } from "./hooks/useFileAttachment";
 import { useModelSelection } from "./hooks/useModelSelection";
 import { useChat } from "./hooks/useChat";
-import { useChatStore } from "@/stores/chatStore";
+import { useChatStore, SessionSettings } from "@/stores/chatStore";
 
 export type ModeType = "chat" | "agent";
 
 export const ChatInterface = () => {
-  const [isSearchEnabled, setIsSearchEnabled] = useState(false);
-  const [isCodeEnabled, setIsCodeEnabled] = useState(false);
-  const [mode, setMode] = useState<ModeType>("chat");
   const [showHistory, setShowHistory] = useState(false);
 
   // Zustand state
@@ -32,7 +30,24 @@ export const ChatInterface = () => {
     updateSessionTitle: updateSessionTitleStore,
     startNewChat: startNewChatStore,
     currentModelName,
+    currentSettings,
+    setCurrentSettings,
   } = useChatStore();
+
+  // Mode and toggles live on the session so they survive reloads.
+  const mode = currentSettings.mode;
+  const isSearchEnabled = currentSettings.web;
+  const isCodeEnabled = currentSettings.code;
+
+  const updateSettings = (next: SessionSettings) => {
+    setCurrentSettings(next);
+    if (currentSessionId) {
+      invoke("update_chat_session_settings", {
+        sessionId: currentSessionId,
+        settings: next,
+      }).catch(() => {});
+    }
+  };
 
   const { input, setInput, textareaRef, resetInput } = useChatInput();
   const {
@@ -73,6 +88,7 @@ export const ChatInterface = () => {
           ollama_model_name: selectedModelData.ollama_model_name,
         }
       : undefined,
+    currentSettings,
   );
 
   // Load sessions and models on mount
@@ -124,7 +140,15 @@ export const ChatInterface = () => {
   };
 
   const toggleMode = () => {
-    setMode(mode === "chat" ? "agent" : "chat");
+    updateSettings({ ...currentSettings, mode: mode === "chat" ? "agent" : "chat" });
+  };
+
+  const toggleSearch = () => {
+    updateSettings({ ...currentSettings, web: !currentSettings.web });
+  };
+
+  const toggleCode = () => {
+    updateSettings({ ...currentSettings, code: !currentSettings.code });
   };
 
   const handleSelectSession = async (sessionId: number) => {
@@ -302,9 +326,9 @@ export const ChatInterface = () => {
 
               <ChatControls
                 isSearchEnabled={isSearchEnabled}
-                onSearchToggle={() => setIsSearchEnabled(!isSearchEnabled)}
+                onSearchToggle={toggleSearch}
                 isCodeEnabled={isCodeEnabled}
-                onCodeToggle={() => setIsCodeEnabled(!isCodeEnabled)}
+                onCodeToggle={toggleCode}
                 isAttachmentEnabled={isAttachmentEnabled}
                 onAttachmentClick={handleAttachmentClick}
                 selectedModel={selectedModel}
@@ -368,9 +392,9 @@ export const ChatInterface = () => {
 
                 <ChatControls
                   isSearchEnabled={isSearchEnabled}
-                  onSearchToggle={() => setIsSearchEnabled(!isSearchEnabled)}
+                  onSearchToggle={toggleSearch}
                   isCodeEnabled={isCodeEnabled}
-                  onCodeToggle={() => setIsCodeEnabled(!isCodeEnabled)}
+                  onCodeToggle={toggleCode}
                   isAttachmentEnabled={isAttachmentEnabled}
                   onAttachmentClick={handleAttachmentClick}
                   selectedModel={selectedModel}

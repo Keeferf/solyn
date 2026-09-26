@@ -23,7 +23,7 @@ pub async fn get_ollama_status() -> Result<OllamaStatus, String> {
     } else {
         (false, None)
     };
-    
+
     Ok(OllamaStatus {
         installed,
         running,

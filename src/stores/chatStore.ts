@@ -13,9 +13,42 @@ export interface ChatSession {
   id: number;
   title: string;
   model_name: string;
+  settings?: string | null;
   created_at: string;
   updated_at: string;
 }
+
+export type ChatMode = "chat" | "agent";
+
+export interface SessionSettings {
+  mode: ChatMode;
+  code: boolean;
+  web: boolean;
+  options?: {
+    temperature?: number;
+    top_p?: number;
+    num_ctx?: number;
+    num_predict?: number;
+  };
+}
+
+export const defaultSessionSettings: SessionSettings = {
+  mode: "chat",
+  code: false,
+  web: false,
+};
+
+/** Parse the JSON blob stored on a session, falling back to defaults. */
+export const parseSessionSettings = (
+  raw?: string | null,
+): SessionSettings => {
+  if (!raw) return { ...defaultSessionSettings };
+  try {
+    return { ...defaultSessionSettings, ...JSON.parse(raw) };
+  } catch {
+    return { ...defaultSessionSettings };
+  }
+};
 
 export interface StoredChatMessage {
   id: number;
@@ -37,6 +70,7 @@ interface ChatState {
   currentSessionId: number | null;
   currentMessages: ChatMessage[];
   currentModelName: string | null;
+  currentSettings: SessionSettings;
 
   // Loading states
   isLoadingSessions: boolean;
@@ -57,6 +91,7 @@ interface ChatState {
   setError: (error: string | null) => void;
   setCurrentMessages: (messages: ChatMessage[]) => void;
   setCurrentModelName: (modelName: string | null) => void;
+  setCurrentSettings: (settings: SessionSettings) => void;
   setLoadingSessions: (loading: boolean) => void;
   setLoadingMessages: (loading: boolean) => void;
 }
@@ -69,6 +104,7 @@ export const useChatStore = create<ChatState>()(
       currentSessionId: null,
       currentMessages: [],
       currentModelName: null,
+      currentSettings: { ...defaultSessionSettings },
       isLoadingSessions: false,
       isLoadingMessages: false,
       isStreaming: false,
@@ -117,6 +153,7 @@ export const useChatStore = create<ChatState>()(
               currentSessionId: sessionId,
               currentMessages: messages,
               currentModelName: result.session.model_name,
+              currentSettings: parseSessionSettings(result.session.settings),
               isLoadingMessages: false,
               error: null,
             });
@@ -152,6 +189,7 @@ export const useChatStore = create<ChatState>()(
             currentSessionId: sessionId,
             currentMessages: [],
             currentModelName: modelName,
+            currentSettings: { ...defaultSessionSettings },
             error: null,
           });
 
@@ -177,6 +215,10 @@ export const useChatStore = create<ChatState>()(
               currentSessionId === sessionId ? [] : state.currentMessages,
             currentModelName:
               currentSessionId === sessionId ? null : state.currentModelName,
+            currentSettings:
+              currentSessionId === sessionId
+                ? { ...defaultSessionSettings }
+                : state.currentSettings,
           }));
         } catch (error) {
           set({ error: "Failed to delete chat session" });
@@ -241,6 +283,7 @@ export const useChatStore = create<ChatState>()(
           currentSessionId: null,
           currentMessages: [],
           currentModelName: null,
+          currentSettings: { ...defaultSessionSettings },
           error: null,
           isStreaming: false,
         });
@@ -252,6 +295,7 @@ export const useChatStore = create<ChatState>()(
           currentSessionId: null,
           currentMessages: [],
           currentModelName: null,
+          currentSettings: { ...defaultSessionSettings },
           error: null,
           isStreaming: false,
         });
@@ -275,6 +319,11 @@ export const useChatStore = create<ChatState>()(
       // Set current model name
       setCurrentModelName: (modelName: string | null) => {
         set({ currentModelName: modelName });
+      },
+
+      // Set current session settings (mode, toggles, overrides)
+      setCurrentSettings: (settings: SessionSettings) => {
+        set({ currentSettings: settings });
       },
 
       // Set loading state for sessions

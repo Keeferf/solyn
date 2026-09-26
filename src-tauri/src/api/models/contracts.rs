@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelImportRequest {
     pub model_name: String,
-    pub modelfile_path: String, 
+    pub modelfile_path: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -13,10 +13,7 @@ pub struct ModelFileResponse {
     pub quantization: String,
 }
 
-pub use crate::data::huggingface_model_types::{
-    HFModelSummary, 
-    HFModelDetails, 
-    ModelFilter, 
-    SearchModelsResponse
-};
 pub use crate::core::huggingface::InstalledModel;
+pub use crate::data::huggingface_model_types::{
+    HFModelDetails, HFModelSummary, ModelFilter, SearchModelsResponse,
+};

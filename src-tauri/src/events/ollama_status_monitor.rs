@@ -1,11 +1,11 @@
+use crate::api::ollama::contracts::OllamaStatus;
+use crate::core::ollama::client::{fetch_ollama_version, is_ollama_installed};
 use std::sync::Arc;
 use std::time::Duration;
+use tauri::Emitter;
+use tauri::Manager;
 use tokio::sync::Mutex;
 use tokio::time::interval;
-use tauri::Manager;
-use tauri::Emitter;
-use crate::core::ollama::client::{is_ollama_installed, fetch_ollama_version};
-use crate::api::ollama::contracts::OllamaStatus;
 
 pub struct OllamaStatusMonitor {
     interval_handle: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
@@ -28,7 +28,7 @@ impl OllamaStatusMonitor {
         }
 
         let app_handle_clone = app_handle.clone();
-        
+
         let handle = tokio::spawn(async move {
             Self::check_and_emit_status(&app_handle_clone).await;
             let mut interval = interval(Duration::from_secs(21600));

@@ -1,25 +1,10 @@
-pub mod client;
 pub mod chat;
+pub mod client;
 pub mod models;
 
+pub use chat::{ChatEvent, ChatMessage, ChatOptions, ChatRequest, ChatResponse, OllamaChatClient};
 pub use client::{
-    OllamaClient,
-    is_ollama_installed,
-    is_ollama_running,
-    fetch_ollama_version,
-    start_ollama,
-    get_installation_instructions,
+    fetch_ollama_version, get_installation_instructions, is_ollama_installed, is_ollama_running,
+    start_ollama, OllamaClient,
 };
-pub use chat::{
-    OllamaChatClient,
-    ChatMessage,
-    ChatEvent,
-    ChatOptions,
-    ChatRequest,
-    ChatResponse,
-};
-pub use models::{
-    OllamaModelClient,
-    OllamaModel,
-    OllamaModelList,
-};
+pub use models::{OllamaModel, OllamaModelClient, OllamaModelList};
