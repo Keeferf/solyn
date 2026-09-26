@@ -184,12 +184,14 @@ export const useChatStore = create<ChatState>()(
           // Reload sessions to get the new one
           await get().loadSessions();
 
-          // Set as current session with empty messages
+          // Set as current session with empty messages. Keep currentSettings:
+          // they may have been chosen on the welcome screen before this session
+          // existed, and `send_chat_stream` persists them server-side. An
+          // explicit "New Chat" resets them in `startNewChat`.
           set({
             currentSessionId: sessionId,
             currentMessages: [],
             currentModelName: modelName,
-            currentSettings: { ...defaultSessionSettings },
             error: null,
           });
 

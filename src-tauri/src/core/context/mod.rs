@@ -173,6 +173,14 @@ mod tests {
     }
 
     #[test]
+    fn code_mode_adds_overlay() {
+        let mut s = settings();
+        assert!(!compose_system_prompt(&s).contains("coding mode"));
+        s.code = true;
+        assert!(compose_system_prompt(&s).contains("coding mode"));
+    }
+
+    #[test]
     fn agent_mode_adds_overlay() {
         let mut s = settings();
         assert!(!compose_system_prompt(&s).contains("agent mode"));
