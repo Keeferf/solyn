@@ -3,8 +3,6 @@ import { NAVIGATION_ITEMS, FOOTER_ITEMS } from "./SidebarNavigation";
 import { OllamaVersionIndicator } from "./OllamaVersionIndicator";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { getVersion } from "@tauri-apps/api/app";
-import { useEffect, useState } from "react";
 import { useChatStore } from "@/stores/chatStore";
 
 interface SidebarProps {
@@ -21,11 +19,6 @@ export const Sidebar = ({
   onToggleCollapse,
 }: SidebarProps) => {
   const { startNewChat } = useChatStore();
-  const [version, setVersion] = useState("");
-
-  useEffect(() => {
-    getVersion().then(setVersion).catch(() => {});
-  }, []);
 
   const handleNavigation = (id: string) => {
     if (id === "models") {
@@ -109,8 +102,7 @@ export const Sidebar = ({
 
       {!isCollapsed && (
         <div className="mt-auto pt-4 border-t border-white/10">
-          <div className="flex items-center justify-between px-3 py-2">
-            <span className="text-sm text-white/40">{version && `v${version}`}</span>
+          <div className="flex items-center justify-end px-3 py-2">
             <OllamaVersionIndicator />
           </div>
         </div>
