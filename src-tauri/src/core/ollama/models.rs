@@ -35,9 +35,14 @@ pub struct OllamaModelClient {
 
 impl OllamaModelClient {
     pub fn new() -> Self {
+        Self::with_base_url("http://localhost:11434".to_string())
+    }
+
+    /// Construct against an arbitrary base URL (used by tests).
+    pub fn with_base_url(base_url: String) -> Self {
         Self {
             client: reqwest::Client::new(),
-            base_url: "http://localhost:11434".to_string(),
+            base_url,
         }
     }
 
@@ -211,11 +216,10 @@ impl OllamaModelClient {
             .await
             .map_err(|e| format!("Failed to parse /api/ps: {}", e))?;
 
-        let base = |n: &str| n.split(':').next().unwrap_or(n).to_string();
         Ok(data
             .models
             .iter()
-            .any(|m| m.name == model_name || base(&m.name) == base(model_name)))
+            .any(|m| m.name == model_name || model_base_name(&m.name) == model_base_name(model_name)))
     }
 
     /// Check Ollama health/version
@@ -264,6 +268,12 @@ impl Default for OllamaModelClient {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Ollama tags carry an optional `:tag` suffix; compare on the base name so
+/// `llama3` matches a warm `llama3:latest`.
+fn model_base_name(name: &str) -> &str {
+    name.split(':').next().unwrap_or(name)
 }
 
 // Helper function to find the ollama executable on Linux.
@@ -353,4 +363,49 @@ fn find_ollama_executable() -> Result<String, String> {
     }
 
     Err("Could not find ollama executable. Please ensure Ollama is installed.".to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn base_name_strips_optional_tag() {
+        assert_eq!(model_base_name("llama3"), "llama3");
+        assert_eq!(model_base_name("llama3:latest"), "llama3");
+        assert_eq!(model_base_name("qwen2.5-coder:7b"), "qwen2.5-coder");
+    }
+
+    #[test]
+    fn parses_tag_list_payload() {
+        let data: OllamaModelList = serde_json::from_str(
+            r#"{"models":[
+                {"name":"llama3:latest","modified_at":"2024-01-01","size":123},
+                {"name":"qwen2.5:7b","modified_at":"2024-02-02","size":456}
+            ]}"#,
+        )
+        .unwrap();
+
+        assert_eq!(data.models.len(), 2);
+        assert_eq!(data.models[0].name, "llama3:latest");
+        assert_eq!(data.models[1].size, 456);
+    }
+
+    #[test]
+    fn parses_empty_tag_list() {
+        let data: OllamaModelList = serde_json::from_str(r#"{"models":[]}"#).unwrap();
+        assert!(data.models.is_empty());
+    }
+
+    #[test]
+    fn tag_list_missing_models_key_is_an_error() {
+        assert!(serde_json::from_str::<OllamaModelList>(r#"{}"#).is_err());
+    }
+
+    #[test]
+    fn parses_ps_payload() {
+        let data: OllamaPsList =
+            serde_json::from_str(r#"{"models":[{"name":"llama3:latest"}]}"#).unwrap();
+        assert_eq!(data.models[0].name, "llama3:latest");
+    }
 }

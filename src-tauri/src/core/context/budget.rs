@@ -38,3 +38,56 @@ pub fn trim_to_budget(mut messages: Vec<ChatMessage>, budget_tokens: usize) -> V
     }
     messages
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn msg(role: &str, content: &str) -> ChatMessage {
+        ChatMessage {
+            role: role.to_string(),
+            content: content.to_string(),
+            thinking: None,
+        }
+    }
+
+    #[test]
+    fn estimates_round_up_to_whole_tokens() {
+        assert_eq!(estimate_tokens(""), 0);
+        assert_eq!(estimate_tokens("abcd"), 1);
+        assert_eq!(estimate_tokens("abcde"), 2);
+    }
+
+    #[test]
+    fn keeps_conversation_that_fits() {
+        let trimmed = trim_to_budget(vec![msg("user", "hi"), msg("assistant", "hello")], 1000);
+        assert_eq!(trimmed.len(), 2);
+        assert_eq!(trimmed[0].content, "hi");
+    }
+
+    #[test]
+    fn single_message_survives_any_budget() {
+        let trimmed = trim_to_budget(vec![msg("user", &"x".repeat(10_000))], 0);
+        assert_eq!(trimmed.len(), 1);
+    }
+
+    #[test]
+    fn exactly_at_budget_is_kept() {
+        let messages = vec![msg("user", "12345678")];
+        let budget = estimate_messages_tokens(&messages);
+        assert_eq!(trim_to_budget(messages, budget).len(), 1);
+    }
+
+    #[test]
+    fn drops_in_whole_turns_and_keeps_the_newest() {
+        let messages = vec![
+            msg("user", &"x".repeat(400)),
+            msg("assistant", &"x".repeat(400)),
+            msg("user", &"x".repeat(400)),
+        ];
+        let trimmed = trim_to_budget(messages, 150);
+        assert_eq!(trimmed.len(), 1);
+        assert_eq!(trimmed[0].role, "user");
+        assert_eq!(trimmed[0].content.len(), 400);
+    }
+}

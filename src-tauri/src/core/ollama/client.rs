@@ -12,9 +12,14 @@ pub struct OllamaClient {
 
 impl OllamaClient {
     pub fn new() -> Self {
+        Self::with_base_url("http://localhost:11434".to_string())
+    }
+
+    /// Construct against an arbitrary base URL (used by tests).
+    pub fn with_base_url(base_url: String) -> Self {
         Self {
             client: reqwest::Client::new(),
-            base_url: "http://localhost:11434".to_string(),
+            base_url,
         }
     }
 

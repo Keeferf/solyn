@@ -12,13 +12,7 @@ use tauri::{AppHandle, Manager};
 
 #[tauri::command]
 pub async fn clear_models_cache(filter: Option<String>) -> Result<(), String> {
-    let filter = match filter.as_deref() {
-        Some("most_downloads") => Some(ModelFilter::MostDownloads),
-        Some("most_liked") => Some(ModelFilter::MostLiked),
-        Some("recent") => Some(ModelFilter::Recent),
-        _ => None,
-    };
-    clear_model_cache(filter);
+    clear_model_cache(parse_optional_filter(filter.as_deref()));
     Ok(())
 }
 
