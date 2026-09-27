@@ -1,13 +1,13 @@
 use tauri;
 use tauri::Manager;
 
-use crate::core::ollama::client::*;
-use crate::core::installation::executor::{execute_ollama_installation, execute_ollama_update}; // Add execute_ollama_update
-use crate::core::platform::detector::detect_operating_system;
-use crate::events::progress_broadcaster::broadcast_download_progress;
-use crate::events::ollama_status_monitor::OllamaStatusMonitor;
-use crate::data::download_state::DownloadStatus;
 use super::contracts::OllamaStatus;
+use crate::core::installation::executor::{execute_ollama_installation, execute_ollama_update}; // Add execute_ollama_update
+use crate::core::ollama::client::*;
+use crate::core::platform::detector::detect_operating_system;
+use crate::data::download_state::DownloadStatus;
+use crate::events::ollama_status_monitor::OllamaStatusMonitor;
+use crate::events::progress_broadcaster::broadcast_download_progress;
 
 #[tauri::command]
 pub async fn start_ollama_service(app_handle: tauri::AppHandle) -> Result<String, String> {
@@ -59,7 +59,6 @@ pub async fn download_ollama(app_handle: tauri::AppHandle) -> Result<String, Str
 
 #[tauri::command]
 pub async fn update_ollama(app_handle: tauri::AppHandle) -> Result<String, String> {
-    
     let window = app_handle
         .get_webview_window("main")
         .ok_or("Main window not found")?;
@@ -87,7 +86,6 @@ pub async fn update_ollama(app_handle: tauri::AppHandle) -> Result<String, Strin
         return Err(e);
     }
 
-
     // Wait a moment for the update to fully settle
     tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
 
@@ -110,7 +108,7 @@ pub async fn update_ollama(app_handle: tauri::AppHandle) -> Result<String, Strin
 pub async fn refresh_ollama_status(app_handle: tauri::AppHandle) -> Result<OllamaStatus, String> {
     let monitor = OllamaStatusMonitor::new();
     monitor.trigger_status_check(&app_handle).await;
-    
+
     // Also return the current status immediately
     let installed = is_ollama_installed().await?;
     let (running, version) = if installed {
@@ -121,7 +119,7 @@ pub async fn refresh_ollama_status(app_handle: tauri::AppHandle) -> Result<Ollam
     } else {
         (false, None)
     };
-    
+
     Ok(OllamaStatus {
         installed,
         running,

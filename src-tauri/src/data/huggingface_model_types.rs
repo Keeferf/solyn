@@ -57,7 +57,7 @@ impl ModelFilter {
             ModelFilter::Recent => "lastModified",
         }
     }
-    
+
     pub fn display_name(&self) -> &'static str {
         match self {
             ModelFilter::MostDownloads => "Most Downloads",

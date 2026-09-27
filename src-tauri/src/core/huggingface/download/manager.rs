@@ -2,16 +2,20 @@
 
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use tauri::AppHandle;  // Removed Manager since it's unused
+use tauri::AppHandle; // Removed Manager since it's unused
 use tokio::fs;
 
 use super::chunking_logic::*;
 use super::paths::*;
 use super::progress_reporting::*;
 
-use crate::core::huggingface::cache::{generate_download_id, insert_cancellation_token, remove_cancellation_token};
-use crate::core::huggingface::modelfile::{write_modelfile, ModelFileConfig, write_metadata};
-use crate::core::huggingface::utils::{extract_parameter_count, extract_quantization, ollama_model_name};
+use crate::core::huggingface::cache::{
+    generate_download_id, insert_cancellation_token, remove_cancellation_token,
+};
+use crate::core::huggingface::modelfile::{write_metadata, write_modelfile, ModelFileConfig};
+use crate::core::huggingface::utils::{
+    extract_parameter_count, extract_quantization, ollama_model_name,
+};
 use crate::core::ollama::models::OllamaModelClient;
 
 const PARALLEL_CHUNKS: usize = 8;
@@ -41,7 +45,8 @@ impl DownloadManager {
 
         let resume = Self::determine_resume_state(&paths, filename).await;
 
-        let (_file_path, quantization) = Self::perform_download(  // Added underscore
+        let (_file_path, quantization) = Self::perform_download(
+            // Added underscore
             model_id,
             filename,
             app_handle,
@@ -49,16 +54,13 @@ impl DownloadManager {
             &cancel_token,
             &download_id,
             resume,
-        ).await?;
+        )
+        .await?;
 
         // Generate Modelfile and metadata
-        let modelfile_path = Self::generate_model_files(
-            app_handle,
-            model_id,
-            filename,
-            &paths,
-            &quantization,
-        ).await?;
+        let modelfile_path =
+            Self::generate_model_files(app_handle, model_id, filename, &paths, &quantization)
+                .await?;
 
         // Create Ollama model
         let ollama_created = Self::create_ollama_model(
@@ -67,7 +69,8 @@ impl DownloadManager {
             filename,
             &quantization,
             &modelfile_path,
-        ).await;
+        )
+        .await;
 
         // Send completion event
         let model_name = ollama_model_name(model_id, Some(quantization.as_str()));
@@ -83,7 +86,14 @@ impl DownloadManager {
         );
 
         remove_cancellation_token(&download_id);
-        send_progress(app_handle, model_id, filename, "complete", 100.0, "Download complete!");
+        send_progress(
+            app_handle,
+            model_id,
+            filename,
+            "complete",
+            100.0,
+            "Download complete!",
+        );
 
         Ok(())
     }
@@ -147,8 +157,8 @@ impl DownloadManager {
         if resume && paths.file_path.exists() {
             if let Ok(metadata) = fs::metadata(&paths.file_path).await {
                 if metadata.len() == total_size {
-                    let quantization = extract_quantization(filename)
-                        .unwrap_or_else(|| "default".to_string());
+                    let quantization =
+                        extract_quantization(filename).unwrap_or_else(|| "default".to_string());
                     return Ok((paths.file_path.clone(), quantization));
                 }
             }
@@ -156,12 +166,19 @@ impl DownloadManager {
 
         // Check if all chunks are complete (previous interrupted combine)
         if resume && are_all_chunks_complete(paths, filename, num_chunks, total_size).await {
-            send_progress(app_handle, model_id, filename, "combining", 0.0, "Combining chunks...");
+            send_progress(
+                app_handle,
+                model_id,
+                filename,
+                "combining",
+                0.0,
+                "Combining chunks...",
+            );
             combine_chunks(paths, filename, num_chunks).await?;
             cleanup_chunks(paths, filename, num_chunks).await;
 
-            let quantization = extract_quantization(filename)
-                .unwrap_or_else(|| "default".to_string());
+            let quantization =
+                extract_quantization(filename).unwrap_or_else(|| "default".to_string());
             return Ok((paths.file_path.clone(), quantization));
         }
 
@@ -181,10 +198,17 @@ impl DownloadManager {
                 filename,
                 "resuming",
                 initial_progress,
-                &format!("Resuming download... {:.1}%", initial_progress)
+                &format!("Resuming download... {:.1}%", initial_progress),
             );
         } else {
-            send_progress(app_handle, model_id, filename, "starting", 0.0, "Starting download...");
+            send_progress(
+                app_handle,
+                model_id,
+                filename,
+                "starting",
+                0.0,
+                "Starting download...",
+            );
         }
 
         // Download chunks in parallel
@@ -199,10 +223,18 @@ impl DownloadManager {
             num_chunks,
             cancel_token,
             download_id,
-        ).await?;
+        )
+        .await?;
 
         // All chunks downloaded - combine them
-        send_progress(app_handle, model_id, filename, "combining", 0.0, "Combining chunks...");
+        send_progress(
+            app_handle,
+            model_id,
+            filename,
+            "combining",
+            0.0,
+            "Combining chunks...",
+        );
         combine_chunks(paths, filename, num_chunks).await?;
         cleanup_chunks(paths, filename, num_chunks).await;
 
@@ -219,8 +251,7 @@ impl DownloadManager {
             return Err("Failed to verify final file".to_string());
         }
 
-        let quantization = extract_quantization(filename)
-            .unwrap_or_else(|| "default".to_string());
+        let quantization = extract_quantization(filename).unwrap_or_else(|| "default".to_string());
         Ok((paths.file_path.clone(), quantization))
     }
 
@@ -271,7 +302,8 @@ impl DownloadManager {
                         end_byte,
                         &cancel_token_for_task,
                         &client_for_task,
-                    ).await
+                    )
+                    .await
                 }
             });
 
@@ -282,9 +314,13 @@ impl DownloadManager {
         let mut last_update = tokio::time::Instant::now();
         let update_interval = tokio::time::Duration::from_millis(500);
 
-        while let Some((_, _handle)) = handles.iter_mut().find(|(_, h)| !h.is_finished()) {  // Added underscore
+        while let Some((_, _handle)) = handles.iter_mut().find(|(_, h)| !h.is_finished()) {
+            // Added underscore
             if cancel_token.load(Ordering::SeqCst) {
-                let progress_percent = (get_total_downloaded_size(paths, filename, num_chunks).await as f64 / total_size as f64) * 100.0;
+                let progress_percent = (get_total_downloaded_size(paths, filename, num_chunks).await
+                    as f64
+                    / total_size as f64)
+                    * 100.0;
                 let progress_rounded = (progress_percent * 10.0).round() / 10.0;
                 send_progress(
                     app_handle,
@@ -292,7 +328,7 @@ impl DownloadManager {
                     filename,
                     "cancelled",
                     progress_rounded,
-                    &format!("Download cancelled at {:.1}%", progress_rounded)
+                    &format!("Download cancelled at {:.1}%", progress_rounded),
                 );
                 remove_cancellation_token(download_id);
                 return Err("Download cancelled".to_string());
@@ -310,7 +346,7 @@ impl DownloadManager {
                     filename,
                     "downloading",
                     progress_rounded,
-                    &format!("Downloading... {:.1}%", progress_rounded)
+                    &format!("Downloading... {:.1}%", progress_rounded),
                 );
 
                 last_update = now;
@@ -357,7 +393,7 @@ impl DownloadManager {
             filename,
             "generating_modelfile",
             100.0,
-            "Generating Modelfile..."
+            "Generating Modelfile...",
         );
 
         let config = ModelFileConfig {
@@ -375,7 +411,7 @@ impl DownloadManager {
                     filename,
                     "modelfile_created",
                     100.0,
-                    "Modelfile created"
+                    "Modelfile created",
                 );
                 path
             }
@@ -391,9 +427,11 @@ impl DownloadManager {
             &paths.model_dir,
             model_id,
             filename,
-            Some(quantization.to_string()),  // Fixed: convert &str to String
+            Some(quantization.to_string()), // Fixed: convert &str to String
             parameter_count,
-        ).await {
+        )
+        .await
+        {
             log::warn!("Failed to create metadata.json: {}", e);
         }
 
@@ -414,7 +452,7 @@ impl DownloadManager {
             filename,
             "creating_ollama_model",
             100.0,
-            "Creating Ollama model..."
+            "Creating Ollama model...",
         );
 
         let model_name = ollama_model_name(model_id, Some(quantization));
@@ -436,14 +474,16 @@ impl DownloadManager {
                     100.0,
                     &format!(
                         "Retrying Ollama model creation (attempt {}/{})...",
-                        current_retry,
-                        max_retries
-                    )
+                        current_retry, max_retries
+                    ),
                 );
                 tokio::time::sleep(tokio::time::Duration::from_secs(wait_seconds)).await;
             }
 
-            match ollama_client.create_model(&model_name, modelfile_path).await {
+            match ollama_client
+                .create_model(&model_name, modelfile_path)
+                .await
+            {
                 Ok(message) => {
                     log::info!("Ollama model created: {} - {}", model_name, message);
                     send_progress(
@@ -452,14 +492,14 @@ impl DownloadManager {
                         filename,
                         "ollama_model_created",
                         100.0,
-                        &format!("Ollama model '{}' created successfully", model_name)
+                        &format!("Ollama model '{}' created successfully", model_name),
                     );
                     send_ollama_created_event(
                         app_handle,
                         &model_name,
                         model_id,
                         quantization,
-                        current_retry
+                        current_retry,
                     );
                     return true;
                 }
@@ -495,7 +535,7 @@ impl DownloadManager {
                 "ollama_not_running",
                 100.0,
                 "Ollama is not running. Model file downloaded but cannot create Ollama model. \
-                 Please start Ollama and try importing manually."
+                 Please start Ollama and try importing manually.",
             );
         } else {
             send_progress(
@@ -507,19 +547,12 @@ impl DownloadManager {
                 &format!(
                     "Failed to create Ollama model after {} attempts: {}. \
                      Please try importing manually.",
-                    max_retries,
-                    last_error
-                )
+                    max_retries, last_error
+                ),
             );
         }
 
-        send_ollama_failed_event(
-            app_handle,
-            &model_name,
-            model_id,
-            &last_error,
-            max_retries
-        );
+        send_ollama_failed_event(app_handle, &model_name, model_id, &last_error, max_retries);
         false
     }
 }

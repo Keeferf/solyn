@@ -1,8 +1,8 @@
+use crate::data::download_state::InstallationInformation;
+use crate::core::platform::detector::detect_operating_system;
 use reqwest;
 use serde_json;
 use std::time::Duration;
-use crate::data::download_state::InstallationInformation;
-use crate::helpers::platform_detector::detect_operating_system;
 use tauri::AppHandle;
 
 pub struct OllamaClient {
@@ -12,15 +12,21 @@ pub struct OllamaClient {
 
 impl OllamaClient {
     pub fn new() -> Self {
+        Self::with_base_url("http://localhost:11434".to_string())
+    }
+
+    /// Construct against an arbitrary base URL (used by tests).
+    pub fn with_base_url(base_url: String) -> Self {
         Self {
             client: reqwest::Client::new(),
-            base_url: "http://localhost:11434".to_string(),
+            base_url,
         }
     }
 
     /// Check if Ollama is running
     pub async fn check_health(&self) -> Result<bool, String> {
-        let response = self.client
+        let response = self
+            .client
             .get(&format!("{}/api/version", self.base_url))
             .timeout(Duration::from_millis(1500))
             .send()
@@ -34,7 +40,8 @@ impl OllamaClient {
 
     /// Get Ollama version
     pub async fn get_version(&self) -> Result<String, String> {
-        let response = self.client
+        let response = self
+            .client
             .get(&format!("{}/api/version", self.base_url))
             .timeout(Duration::from_millis(1500))
             .send()
@@ -68,21 +75,21 @@ impl Default for OllamaClient {
 pub async fn is_ollama_installed() -> Result<bool, String> {
     #[cfg(target_os = "windows")]
     {
-        use std::path::Path;
         use std::env;
-        
+        use std::path::Path;
+
         // Method 1: Check common installation paths first (no timeouts, instant)
         let common_paths = [
             r"C:\Program Files\Ollama\ollama.exe",
             r"C:\Program Files (x86)\Ollama\ollama.exe",
         ];
-        
+
         for path in common_paths.iter() {
             if Path::new(path).exists() {
                 return Ok(true);
             }
         }
-        
+
         // Method 2: Check %LOCALAPPDATA%
         if let Ok(localappdata) = env::var("LOCALAPPDATA") {
             let path = format!(r"{}\Programs\Ollama\ollama.exe", localappdata);
@@ -90,7 +97,7 @@ pub async fn is_ollama_installed() -> Result<bool, String> {
                 return Ok(true);
             }
         }
-        
+
         // Method 3: Check %USERPROFILE%
         if let Ok(userprofile) = env::var("USERPROFILE") {
             let path = format!(r"{}\AppData\Local\Programs\Ollama\ollama.exe", userprofile);
@@ -98,11 +105,11 @@ pub async fn is_ollama_installed() -> Result<bool, String> {
                 return Ok(true);
             }
         }
-        
+
         // Method 4: Try using where command (no timeout = instant on success, normal on failure)
         use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x08000000;
-        
+
         let output = std::process::Command::new("where")
             .arg("ollama")
             .creation_flags(CREATE_NO_WINDOW)
@@ -110,17 +117,17 @@ pub async fn is_ollama_installed() -> Result<bool, String> {
             .stderr(std::process::Stdio::null())
             .stdin(std::process::Stdio::null())
             .output();
-            
+
         if let Ok(output) = output {
             if output.status.success() {
                 return Ok(true);
             }
         }
-        
+
         // Skip registry checks—they're 200ms each with minimal ROI
         Ok(false)
     }
-    
+
     #[cfg(not(target_os = "windows"))]
     {
         use std::path::Path;
@@ -141,7 +148,7 @@ pub async fn is_ollama_installed() -> Result<bool, String> {
             .arg("ollama")
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())
-            .output() 
+            .output()
         {
             Ok(output) => Ok(output.status.success()),
             Err(_) => Ok(false),
@@ -187,12 +194,12 @@ pub async fn start_ollama(_app_handle: &AppHandle) -> Result<String, String> {
     {
         use std::os::windows::process::CommandExt;
         const CREATE_NEW_PROCESS_GROUP: u32 = 0x00000200;
-        
+
         let ollama_paths = [
             r"C:\Program Files\Ollama\ollama.exe",
             r"C:\Program Files (x86)\Ollama\ollama.exe",
         ];
-        
+
         let mut started = false;
         for path in ollama_paths.iter() {
             if std::path::Path::new(path).exists() {
@@ -200,39 +207,39 @@ pub async fn start_ollama(_app_handle: &AppHandle) -> Result<String, String> {
                     .arg("serve")
                     .creation_flags(CREATE_NEW_PROCESS_GROUP)
                     .spawn();
-                    
+
                 if child.is_ok() {
                     started = true;
                     break;
                 }
             }
         }
-        
+
         if !started {
             // Fallback to PATH lookup
             let child = std::process::Command::new("ollama")
                 .arg("serve")
                 .creation_flags(CREATE_NEW_PROCESS_GROUP)
                 .spawn();
-                
+
             if child.is_err() {
                 return Err("Failed to start Ollama".to_string());
             }
         }
-        
+
         // ADAPTIVE POLLING: Poll every 250ms for up to 3 seconds (12 attempts)
         // instead of hard sleep(3s)
         for _attempt in 1..=12 {
             tokio::time::sleep(Duration::from_millis(250)).await;
-            
+
             if is_ollama_running().await? {
                 return Ok("Ollama started successfully".to_string());
             }
         }
-        
+
         Err("Ollama failed to start after 3 seconds".to_string())
     }
-    
+
     #[cfg(target_os = "linux")]
     {
         // The official installer registers a *system* service named `ollama`;
@@ -271,7 +278,7 @@ pub async fn start_ollama(_app_handle: &AppHandle) -> Result<String, String> {
 
         Err("Ollama is starting but not ready yet".to_string())
     }
-    
+
     #[cfg(not(any(target_os = "windows", target_os = "linux")))]
     {
         Err("Unsupported platform for starting Ollama".to_string())
@@ -280,7 +287,7 @@ pub async fn start_ollama(_app_handle: &AppHandle) -> Result<String, String> {
 
 pub async fn get_installation_instructions() -> Result<InstallationInformation, String> {
     let platform = detect_operating_system();
-    
+
     let (command, estimated_time) = match platform.as_str() {
         "windows" => (
             "irm https://ollama.com/install.ps1 | iex".to_string(),

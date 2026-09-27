@@ -7,11 +7,11 @@ import {
   groupFilesByQuantization,
   getDefaultSelectedFile,
 } from "./utils/modalUtils";
-import { LoadingState } from "./ModalDetails/LoadingState";
-import { ErrorState } from "./ModalDetails/ErrorState";
-import { ModelInfo } from "./ModalDetails/ModelInfo";
-import { QuantizationCard } from "./ModalDetails/QuantizationCard";
-import { SelectedFileDetails } from "./ModalDetails/SelectedFileDetails";
+import { LoadingState } from "./modal-details/LoadingState";
+import { ErrorState } from "./modal-details/ErrorState";
+import { ModelInfo } from "./modal-details/ModelInfo";
+import { QuantizationCard } from "./modal-details/QuantizationCard";
+import { SelectedFileDetails } from "./modal-details/SelectedFileDetails";
 import { invoke } from "@tauri-apps/api/core";
 
 interface ModelDetailModalProps {

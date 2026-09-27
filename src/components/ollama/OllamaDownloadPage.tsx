@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Download, ExternalLink, CircleX } from "lucide-react";
-import { TerminalDisplay } from "./models/TerminalDisplay";
-import { useOllamaInstallation } from "./models/hooks/useOllamaInstallation";
+import { TerminalDisplay } from "@/components/models/TerminalDisplay";
+import { useOllamaInstallation } from "@/components/models/hooks/useOllamaInstallation";
 
 export enum DownloadStatus {
   Idle = "Idle",

@@ -1,9 +1,9 @@
+use futures_util::StreamExt;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::fs;
 use tokio::io::{AsyncWriteExt, BufWriter};
-use futures_util::StreamExt;
 
 use super::paths::ModelPaths;
 
@@ -64,9 +64,11 @@ pub async fn download_chunk(
         .timeout(Duration::from_secs(3600));
 
     if resume_from > 0 {
-        request_builder = request_builder.header("Range", format!("bytes={}-{}", resume_start, end_byte));
+        request_builder =
+            request_builder.header("Range", format!("bytes={}-{}", resume_start, end_byte));
     } else {
-        request_builder = request_builder.header("Range", format!("bytes={}-{}", start_byte, end_byte));
+        request_builder =
+            request_builder.header("Range", format!("bytes={}-{}", start_byte, end_byte));
     }
 
     let response = request_builder
@@ -74,8 +76,13 @@ pub async fn download_chunk(
         .await
         .map_err(|e| format!("Failed to download chunk {}: {}", chunk_index, e))?;
 
-    if !response.status().is_success() && response.status() != reqwest::StatusCode::PARTIAL_CONTENT {
-        return Err(format!("Chunk {} download failed with status: {}", chunk_index, response.status()));
+    if !response.status().is_success() && response.status() != reqwest::StatusCode::PARTIAL_CONTENT
+    {
+        return Err(format!(
+            "Chunk {} download failed with status: {}",
+            chunk_index,
+            response.status()
+        ));
     }
 
     let mut stream = response.bytes_stream();
@@ -88,10 +95,11 @@ pub async fn download_chunk(
             return Err("Download cancelled".to_string());
         }
 
-        let chunk = chunk_result
-            .map_err(|e| format!("Chunk {} download error: {}", chunk_index, e))?;
+        let chunk =
+            chunk_result.map_err(|e| format!("Chunk {} download error: {}", chunk_index, e))?;
 
-        buffered_writer.write_all(&chunk)
+        buffered_writer
+            .write_all(&chunk)
             .await
             .map_err(|e| format!("Chunk {} write error: {}", chunk_index, e))?;
 
@@ -99,14 +107,16 @@ pub async fn download_chunk(
         buffer_bytes_written += chunk.len() as u64;
 
         if buffer_bytes_written >= buffer_capacity {
-            buffered_writer.flush()
+            buffered_writer
+                .flush()
                 .await
                 .map_err(|e| format!("Failed to flush chunk {}: {}", chunk_index, e))?;
             buffer_bytes_written = 0;
         }
     }
 
-    buffered_writer.flush()
+    buffered_writer
+        .flush()
         .await
         .map_err(|e| format!("Failed to flush chunk {}: {}", chunk_index, e))?;
 
@@ -125,7 +135,11 @@ pub async fn download_chunk(
 }
 
 /// Get total downloaded size from all chunks
-pub async fn get_total_downloaded_size(paths: &ModelPaths, filename: &str, num_chunks: usize) -> u64 {
+pub async fn get_total_downloaded_size(
+    paths: &ModelPaths,
+    filename: &str,
+    num_chunks: usize,
+) -> u64 {
     let mut total = 0;
     for i in 0..num_chunks {
         let chunk_path = paths.chunk_path(filename, i);
@@ -137,7 +151,12 @@ pub async fn get_total_downloaded_size(paths: &ModelPaths, filename: &str, num_c
 }
 
 /// Check if all chunks are complete
-pub async fn are_all_chunks_complete(paths: &ModelPaths, filename: &str, num_chunks: usize, total_size: u64) -> bool {
+pub async fn are_all_chunks_complete(
+    paths: &ModelPaths,
+    filename: &str,
+    num_chunks: usize,
+    total_size: u64,
+) -> bool {
     for i in 0..num_chunks {
         let chunk_path = paths.chunk_path(filename, i);
         if !chunk_path.exists() {
@@ -198,13 +217,15 @@ pub async fn combine_chunks(
                 break;
             }
 
-            buffered_writer.write_all(&buffer[..bytes_read])
+            buffered_writer
+                .write_all(&buffer[..bytes_read])
                 .await
                 .map_err(|e| format!("Failed to write chunk {}: {}", i, e))?;
         }
     }
 
-    buffered_writer.flush()
+    buffered_writer
+        .flush()
         .await
         .map_err(|e| format!("Failed to flush final file: {}", e))?;
 
@@ -231,8 +252,12 @@ mod tests {
     async fn totals_downloaded_chunk_sizes() {
         let dir = tempfile::tempdir().unwrap();
         let paths = model_paths(dir.path(), "m.gguf");
-        tokio::fs::write(paths.chunk_path("m.gguf", 0), vec![0u8; 10]).await.unwrap();
-        tokio::fs::write(paths.chunk_path("m.gguf", 1), vec![0u8; 5]).await.unwrap();
+        tokio::fs::write(paths.chunk_path("m.gguf", 0), vec![0u8; 10])
+            .await
+            .unwrap();
+        tokio::fs::write(paths.chunk_path("m.gguf", 1), vec![0u8; 5])
+            .await
+            .unwrap();
 
         assert_eq!(get_total_downloaded_size(&paths, "m.gguf", 3).await, 15);
     }
@@ -241,8 +266,12 @@ mod tests {
     async fn all_chunks_complete_when_sizes_match() {
         let dir = tempfile::tempdir().unwrap();
         let paths = model_paths(dir.path(), "m.gguf");
-        tokio::fs::write(paths.chunk_path("m.gguf", 0), vec![0u8; 10]).await.unwrap();
-        tokio::fs::write(paths.chunk_path("m.gguf", 1), vec![0u8; 10]).await.unwrap();
+        tokio::fs::write(paths.chunk_path("m.gguf", 0), vec![0u8; 10])
+            .await
+            .unwrap();
+        tokio::fs::write(paths.chunk_path("m.gguf", 1), vec![0u8; 10])
+            .await
+            .unwrap();
 
         assert!(are_all_chunks_complete(&paths, "m.gguf", 2, 20).await);
     }
@@ -251,8 +280,12 @@ mod tests {
     async fn all_chunks_incomplete_when_a_chunk_is_short() {
         let dir = tempfile::tempdir().unwrap();
         let paths = model_paths(dir.path(), "m.gguf");
-        tokio::fs::write(paths.chunk_path("m.gguf", 0), vec![0u8; 10]).await.unwrap();
-        tokio::fs::write(paths.chunk_path("m.gguf", 1), vec![0u8; 9]).await.unwrap();
+        tokio::fs::write(paths.chunk_path("m.gguf", 0), vec![0u8; 10])
+            .await
+            .unwrap();
+        tokio::fs::write(paths.chunk_path("m.gguf", 1), vec![0u8; 9])
+            .await
+            .unwrap();
 
         assert!(!are_all_chunks_complete(&paths, "m.gguf", 2, 20).await);
     }
@@ -262,12 +295,18 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let paths = model_paths(dir.path(), "m.gguf");
         // total 25 / 2 chunks -> chunk_size 12, remainder 1 -> last chunk 13.
-        tokio::fs::write(paths.chunk_path("m.gguf", 0), vec![0u8; 12]).await.unwrap();
-        tokio::fs::write(paths.chunk_path("m.gguf", 1), vec![0u8; 13]).await.unwrap();
+        tokio::fs::write(paths.chunk_path("m.gguf", 0), vec![0u8; 12])
+            .await
+            .unwrap();
+        tokio::fs::write(paths.chunk_path("m.gguf", 1), vec![0u8; 13])
+            .await
+            .unwrap();
 
         assert!(are_all_chunks_complete(&paths, "m.gguf", 2, 25).await);
 
-        tokio::fs::write(paths.chunk_path("m.gguf", 1), vec![0u8; 12]).await.unwrap();
+        tokio::fs::write(paths.chunk_path("m.gguf", 1), vec![0u8; 12])
+            .await
+            .unwrap();
         assert!(!are_all_chunks_complete(&paths, "m.gguf", 2, 25).await);
     }
 
@@ -275,7 +314,9 @@ mod tests {
     async fn missing_chunk_is_incomplete() {
         let dir = tempfile::tempdir().unwrap();
         let paths = model_paths(dir.path(), "m.gguf");
-        tokio::fs::write(paths.chunk_path("m.gguf", 0), vec![0u8; 10]).await.unwrap();
+        tokio::fs::write(paths.chunk_path("m.gguf", 0), vec![0u8; 10])
+            .await
+            .unwrap();
 
         assert!(!are_all_chunks_complete(&paths, "m.gguf", 2, 20).await);
     }
@@ -284,8 +325,12 @@ mod tests {
     async fn combine_chunks_reassembles_in_order() {
         let dir = tempfile::tempdir().unwrap();
         let paths = model_paths(dir.path(), "m.gguf");
-        tokio::fs::write(paths.chunk_path("m.gguf", 0), [1u8, 2, 3]).await.unwrap();
-        tokio::fs::write(paths.chunk_path("m.gguf", 1), [4u8, 5]).await.unwrap();
+        tokio::fs::write(paths.chunk_path("m.gguf", 0), [1u8, 2, 3])
+            .await
+            .unwrap();
+        tokio::fs::write(paths.chunk_path("m.gguf", 1), [4u8, 5])
+            .await
+            .unwrap();
 
         combine_chunks(&paths, "m.gguf", 2).await.unwrap();
 

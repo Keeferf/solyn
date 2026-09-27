@@ -1,9 +1,9 @@
 // src/core/ollama/models.rs
 use reqwest;
-use serde_json::json;
-use std::time::Duration;
 use serde::Deserialize;
+use serde_json::json;
 use std::path::PathBuf;
+use std::time::Duration;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct OllamaModel {
@@ -35,9 +35,14 @@ pub struct OllamaModelClient {
 
 impl OllamaModelClient {
     pub fn new() -> Self {
+        Self::with_base_url("http://localhost:11434".to_string())
+    }
+
+    /// Construct against an arbitrary base URL (used by tests).
+    pub fn with_base_url(base_url: String) -> Self {
         Self {
             client: reqwest::Client::new(),
-            base_url: "http://localhost:11434".to_string(),
+            base_url,
         }
     }
 
@@ -49,12 +54,18 @@ impl OllamaModelClient {
     /// read the app's data dir). The HTTP `/api/create` endpoint instead makes
     /// the server open the path itself, which fails on Linux and for relative
     /// `FROM ./file` paths in general.
-    pub async fn create_model(&self, model_name: &str, modelfile_path: &PathBuf) -> Result<String, String> {
+    pub async fn create_model(
+        &self,
+        model_name: &str,
+        modelfile_path: &PathBuf,
+    ) -> Result<String, String> {
         let ollama_path = find_ollama_executable()?;
 
         // `FROM ./file` in the Modelfile is resolved relative to the working
         // directory, so run the CLI from the directory that holds the GGUF.
-        let working_dir = modelfile_path.parent().unwrap_or_else(|| std::path::Path::new("."));
+        let working_dir = modelfile_path
+            .parent()
+            .unwrap_or_else(|| std::path::Path::new("."));
 
         let mut command = tokio::process::Command::new(&ollama_path);
         command
@@ -94,8 +105,9 @@ impl OllamaModelClient {
     /// List available models (returns just names)
     pub async fn list_models(&self) -> Result<Vec<String>, String> {
         let url = format!("{}/api/tags", self.base_url);
-        
-        let response = self.client
+
+        let response = self
+            .client
             .get(&url)
             .timeout(Duration::from_secs(5))
             .send()
@@ -103,15 +115,13 @@ impl OllamaModelClient {
             .map_err(|e| format!("Failed to list models: {}", e))?;
 
         if response.status().is_success() {
-            let data: OllamaModelList = response.json()
+            let data: OllamaModelList = response
+                .json()
                 .await
                 .map_err(|e| format!("Failed to parse response: {}", e))?;
-            
-            let models: Vec<String> = data.models
-                .into_iter()
-                .map(|m| m.name)
-                .collect();
-            
+
+            let models: Vec<String> = data.models.into_iter().map(|m| m.name).collect();
+
             Ok(models)
         } else {
             Err("Failed to list models".to_string())
@@ -121,8 +131,9 @@ impl OllamaModelClient {
     /// Get all models with full details
     pub async fn get_all_models(&self) -> Result<Vec<OllamaModel>, String> {
         let url = format!("{}/api/tags", self.base_url);
-        
-        let response = self.client
+
+        let response = self
+            .client
             .get(&url)
             .timeout(Duration::from_secs(5))
             .send()
@@ -130,10 +141,11 @@ impl OllamaModelClient {
             .map_err(|e| format!("Failed to list models: {}", e))?;
 
         if response.status().is_success() {
-            let data: OllamaModelList = response.json()
+            let data: OllamaModelList = response
+                .json()
                 .await
                 .map_err(|e| format!("Failed to parse response: {}", e))?;
-            
+
             Ok(data.models)
         } else {
             Err("Failed to list models".to_string())
@@ -143,12 +155,13 @@ impl OllamaModelClient {
     /// Delete a model
     pub async fn delete_model(&self, model_name: &str) -> Result<(), String> {
         let url = format!("{}/api/delete", self.base_url);
-        
+
         let payload = json!({
             "name": model_name,
         });
 
-        let response = self.client
+        let response = self
+            .client
             .delete(&url)
             .json(&payload)
             .send()
@@ -165,13 +178,13 @@ impl OllamaModelClient {
     /// Get model details by name
     pub async fn get_model_details(&self, model_name: &str) -> Result<OllamaModel, String> {
         let all_models = self.get_all_models().await?;
-        
+
         for model in all_models {
             if model.name == model_name {
                 return Ok(model);
             }
         }
-        
+
         Err(format!("Model '{}' not found", model_name))
     }
 
@@ -186,7 +199,8 @@ impl OllamaModelClient {
     pub async fn is_model_loaded(&self, model_name: &str) -> Result<bool, String> {
         let url = format!("{}/api/ps", self.base_url);
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .timeout(Duration::from_secs(5))
             .send()
@@ -197,19 +211,21 @@ impl OllamaModelClient {
             return Ok(false);
         }
 
-        let data: OllamaPsList = response.json()
+        let data: OllamaPsList = response
+            .json()
             .await
             .map_err(|e| format!("Failed to parse /api/ps: {}", e))?;
 
-        let base = |n: &str| n.split(':').next().unwrap_or(n).to_string();
-        Ok(data.models.iter().any(|m| {
-            m.name == model_name || base(&m.name) == base(model_name)
-        }))
+        Ok(data
+            .models
+            .iter()
+            .any(|m| m.name == model_name || model_base_name(&m.name) == model_base_name(model_name)))
     }
 
     /// Check Ollama health/version
     pub async fn check_health(&self) -> Result<bool, String> {
-        let response = self.client
+        let response = self
+            .client
             .get(&format!("{}/api/version", self.base_url))
             .timeout(Duration::from_secs(2))
             .send()
@@ -223,7 +239,8 @@ impl OllamaModelClient {
 
     /// Get Ollama version
     pub async fn get_version(&self) -> Result<String, String> {
-        let response = self.client
+        let response = self
+            .client
             .get(&format!("{}/api/version", self.base_url))
             .timeout(Duration::from_secs(2))
             .send()
@@ -231,10 +248,11 @@ impl OllamaModelClient {
             .map_err(|e| format!("Failed to get version: {}", e))?;
 
         if response.status().is_success() {
-            let json: serde_json::Value = response.json()
+            let json: serde_json::Value = response
+                .json()
                 .await
                 .map_err(|e| format!("Failed to parse response: {}", e))?;
-            
+
             if let Some(version) = json.get("version").and_then(|v| v.as_str()) {
                 Ok(version.to_string())
             } else {
@@ -250,6 +268,12 @@ impl Default for OllamaModelClient {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Ollama tags carry an optional `:tag` suffix; compare on the base name so
+/// `llama3` matches a warm `llama3:latest`.
+fn model_base_name(name: &str) -> &str {
+    name.split(':').next().unwrap_or(name)
 }
 
 // Helper function to find the ollama executable on Linux.
@@ -280,14 +304,14 @@ fn find_ollama_executable() -> Result<String, String> {
 fn find_ollama_executable() -> Result<String, String> {
     use std::env;
     use std::path::Path;
-    
+
     let common_paths = [
         r"C:\Program Files\Ollama\ollama.exe",
         r"C:\Program Files (x86)\Ollama\ollama.exe",
         r"%LOCALAPPDATA%\Programs\Ollama\ollama.exe",
         r"%USERPROFILE%\AppData\Local\Programs\Ollama\ollama.exe",
     ];
-    
+
     for path in common_paths.iter() {
         let expanded_path = if path.starts_with('%') {
             let path_str = path.to_string();
@@ -309,22 +333,22 @@ fn find_ollama_executable() -> Result<String, String> {
         } else {
             path.to_string()
         };
-        
+
         if Path::new(&expanded_path).exists() {
             return Ok(expanded_path);
         }
     }
-    
+
     // Try using 'where' command
     use std::os::windows::process::CommandExt;
     const CREATE_NO_WINDOW: u32 = 0x08000000;
-    
+
     let output = std::process::Command::new("where")
         .arg("ollama")
         .creation_flags(CREATE_NO_WINDOW)
         .output()
         .map_err(|e| format!("Failed to find ollama: {}", e))?;
-    
+
     if output.status.success() {
         let path = String::from_utf8_lossy(&output.stdout)
             .lines()
@@ -332,11 +356,56 @@ fn find_ollama_executable() -> Result<String, String> {
             .ok_or_else(|| "No ollama found".to_string())?
             .trim()
             .to_string();
-        
+
         if !path.is_empty() {
             return Ok(path);
         }
     }
-    
+
     Err("Could not find ollama executable. Please ensure Ollama is installed.".to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn base_name_strips_optional_tag() {
+        assert_eq!(model_base_name("llama3"), "llama3");
+        assert_eq!(model_base_name("llama3:latest"), "llama3");
+        assert_eq!(model_base_name("qwen2.5-coder:7b"), "qwen2.5-coder");
+    }
+
+    #[test]
+    fn parses_tag_list_payload() {
+        let data: OllamaModelList = serde_json::from_str(
+            r#"{"models":[
+                {"name":"llama3:latest","modified_at":"2024-01-01","size":123},
+                {"name":"qwen2.5:7b","modified_at":"2024-02-02","size":456}
+            ]}"#,
+        )
+        .unwrap();
+
+        assert_eq!(data.models.len(), 2);
+        assert_eq!(data.models[0].name, "llama3:latest");
+        assert_eq!(data.models[1].size, 456);
+    }
+
+    #[test]
+    fn parses_empty_tag_list() {
+        let data: OllamaModelList = serde_json::from_str(r#"{"models":[]}"#).unwrap();
+        assert!(data.models.is_empty());
+    }
+
+    #[test]
+    fn tag_list_missing_models_key_is_an_error() {
+        assert!(serde_json::from_str::<OllamaModelList>(r#"{}"#).is_err());
+    }
+
+    #[test]
+    fn parses_ps_payload() {
+        let data: OllamaPsList =
+            serde_json::from_str(r#"{"models":[{"name":"llama3:latest"}]}"#).unwrap();
+        assert_eq!(data.models[0].name, "llama3:latest");
+    }
 }

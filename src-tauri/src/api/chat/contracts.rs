@@ -1,8 +1,9 @@
 // src-tauri/src/api/chat/contracts.rs
+use crate::core::context::SessionSettings;
+use crate::core::ollama::chat::OllamaChatClient;
 use serde::Deserialize;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use crate::core::ollama::chat::OllamaChatClient;
 
 // Chat state
 pub struct OllamaState {
@@ -23,27 +24,12 @@ pub struct CreateSessionRequest {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct ChatRequestData {
-    pub session_id: Option<i64>,
-    pub model: String,
-    pub message: String,
-    pub temperature: Option<f32>,
-    pub top_p: Option<f32>,
-    pub top_k: Option<i32>,
-    pub num_ctx: Option<i32>,
-    pub num_predict: Option<i32>,
-}
-
-#[derive(Debug, Deserialize)]
 pub struct ChatStreamData {
     pub session_id: Option<i64>,
     pub model: String,
-    pub messages: Vec<ChatMessageData>,
-    pub temperature: Option<f32>,
-    pub top_p: Option<f32>,
-    pub top_k: Option<i32>,
-    pub num_ctx: Option<i32>,
-    pub num_predict: Option<i32>,
+    pub message: String,
+    #[serde(default)]
+    pub settings: SessionSettings,
 }
 
 #[derive(Debug, Deserialize, Clone)]

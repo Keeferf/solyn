@@ -8,6 +8,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { HFModelSummary } from "./hooks/useHuggingFaceModels";
+import { RingSpinner } from "../ui/RingSpinner";
 
 interface BrowseModelsProps {
   models: HFModelSummary[];
@@ -179,7 +180,10 @@ export const BrowseModels = ({
                   </div>
                   {isDownloading && (
                     <div className="text-purple-accent">
-                      <Loader className="animate-spin" size={16} />
+                      <RingSpinner
+                        size={16}
+                        className="border-2 border-purple-accent/25 border-t-purple-accent"
+                      />
                     </div>
                   )}
                 </div>
