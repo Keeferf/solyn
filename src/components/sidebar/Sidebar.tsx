@@ -102,8 +102,7 @@ export const Sidebar = ({
 
       {!isCollapsed && (
         <div className="mt-auto pt-4 border-t border-white/10">
-          <div className="flex items-center justify-between px-3 py-2">
-            <span className="text-sm text-white/40">v0.2.3</span>
+          <div className="flex items-center justify-end px-3 py-2">
             <OllamaVersionIndicator />
           </div>
         </div>
