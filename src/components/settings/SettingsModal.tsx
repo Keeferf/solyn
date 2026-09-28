@@ -6,7 +6,6 @@ import {
   useThemeStore,
 } from "@/stores/themeStore";
 import { CodeBlock } from "@/components/chat/CodeBlock";
-import { useHighlighter } from "@/components/chat/hooks/useHighlighter";
 
 const PREVIEW_CODE = `// Theme preview
 import { useState } from "react";
@@ -30,19 +29,9 @@ interface SettingsModalProps {
   onClose: () => void;
 }
 
-const ThemePreview = () => {
-  const loaded = useHighlighter();
-
-  return (
-    <CodeBlock
-      className="language-tsx"
-      highlighter={loaded?.highlighter ?? null}
-      theme={loaded?.theme ?? null}
-    >
-      {PREVIEW_CODE}
-    </CodeBlock>
-  );
-};
+const ThemePreview = () => (
+  <CodeBlock className="language-tsx">{PREVIEW_CODE}</CodeBlock>
+);
 
 export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
   const modalRef = useRef<HTMLDivElement>(null);

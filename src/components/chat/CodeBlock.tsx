@@ -1,27 +1,62 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Copy, Check } from "lucide-react";
-import { type Highlighter } from "shiki";
+import { codeToHtml, getSingletonHighlighter } from "shiki";
+import { useThemeStore } from "@/stores/themeStore";
 
 interface CodeBlockProps {
   className?: string;
   children: React.ReactNode;
-  highlighter: Highlighter | null;
-  theme: string | null;
   inline?: boolean;
+}
+
+interface RenderedCode {
+  html: string;
+  bg?: string;
+  fg?: string;
 }
 
 export const CodeBlock = ({
   className,
   children,
-  highlighter,
-  theme,
   inline = false,
 }: CodeBlockProps) => {
   const [copied, setCopied] = useState(false);
+  const [rendered, setRendered] = useState<RenderedCode | null>(null);
+  const theme = useThemeStore((state) => state.theme);
 
-  const match = /language-(\w+)/.exec(className || "");
+  const match = /language-([^\s]+)/.exec(className || "");
   const lang = match ? match[1] : "";
   const codeContent = String(children).replace(/\n$/, "");
+
+  // Highlight on demand: Shiki loads the grammar for this language (and the
+  // theme) the first time it is seen, so any bundled language works without
+  // a fixed list. The previous render stays until the new one is ready.
+  useEffect(() => {
+    if (inline) return;
+    let active = true;
+
+    (async () => {
+      try {
+        let html: string;
+        try {
+          html = await codeToHtml(codeContent, { lang: lang || "text", theme });
+        } catch {
+          // Unknown language: Shiki throws, so render it as plaintext.
+          html = await codeToHtml(codeContent, { lang: "text", theme });
+        }
+        const { bg, fg } = (
+          await getSingletonHighlighter({ themes: [theme] })
+        ).getTheme(theme);
+        if (active) setRendered({ html, bg, fg });
+      } catch {
+        // Leave the styled fallback in place.
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [codeContent, lang, theme, inline]);
 
   const handleCopy = async () => {
     try {
@@ -35,28 +70,13 @@ export const CodeBlock = ({
     return <code className={className}>{children}</code>;
   }
 
-  // Use the resolved Shiki theme for the chrome so it always matches the
-  // token colors. The highlighter only hands us a theme once it's loaded.
-  let colors: { bg?: string; fg?: string } | null = null;
-  let highlighted: string | null = null;
-  if (highlighter && theme) {
-    try {
-      colors = highlighter.getTheme(theme);
-      highlighted = highlighter.codeToHtml(codeContent, {
-        lang: highlighter.getLoadedLanguages().includes(lang) ? lang : "text",
-        theme,
-      });
-    } catch {
-      colors = null;
-      highlighted = null;
-    }
-  }
-
   return (
     <div
       className="shiki-wrapper"
       style={
-        colors ? { backgroundColor: colors.bg, color: colors.fg } : undefined
+        rendered
+          ? { backgroundColor: rendered.bg, color: rendered.fg }
+          : undefined
       }
     >
       <div className="shiki-header">
@@ -79,11 +99,11 @@ export const CodeBlock = ({
           )}
         </button>
       </div>
-      {highlighted ? (
+      {rendered ? (
         <div
           className="shiki-container"
           data-language={lang}
-          dangerouslySetInnerHTML={{ __html: highlighted }}
+          dangerouslySetInnerHTML={{ __html: rendered.html }}
         />
       ) : (
         <div className="shiki-container shiki-container-fallback">
