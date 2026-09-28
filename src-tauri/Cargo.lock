@@ -3870,7 +3870,7 @@ dependencies = [
 
 [[package]]
 name = "solyn"
-version = "1.0.1"
+version = "1.1.2"
 dependencies = [
  "arboard",
  "base64 0.23.1",
