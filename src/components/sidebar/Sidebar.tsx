@@ -1,8 +1,9 @@
+import { useState } from "react";
 import { SidebarItem } from "./SidebarItem";
 import { NAVIGATION_ITEMS, FOOTER_ITEMS } from "./SidebarNavigation";
 import { OllamaVersionIndicator } from "./OllamaVersionIndicator";
-import { ThemeSwitcher } from "./ThemeSwitcher";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { SettingsModal } from "@/components/settings/SettingsModal";
+import { ChevronLeft, ChevronRight, Settings } from "lucide-react";
 import { useChatStore } from "@/stores/chatStore";
 
 interface SidebarProps {
@@ -19,6 +20,7 @@ export const Sidebar = ({
   onToggleCollapse,
 }: SidebarProps) => {
   const { startNewChat } = useChatStore();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const handleNavigation = (id: string) => {
     if (id === "models") {
@@ -85,9 +87,6 @@ export const Sidebar = ({
         ))}
 
         <div className="pt-4 mt-4 border-t border-white/10">
-          {/* Theme Switcher */}
-          <ThemeSwitcher collapsed={isCollapsed} />
-
           {FOOTER_ITEMS.map((item) => (
             <SidebarItem
               key={item.id}
@@ -100,13 +99,25 @@ export const Sidebar = ({
         </div>
       </nav>
 
-      {!isCollapsed && (
-        <div className="mt-auto pt-4 border-t border-white/10">
+      <div className="mt-auto pt-4 border-t border-white/10">
+        <SidebarItem
+          icon={<Settings size={20} />}
+          label="Settings"
+          onClick={() => setIsSettingsOpen(true)}
+          collapsed={isCollapsed}
+        />
+
+        {!isCollapsed && (
           <div className="flex items-center justify-end px-3 py-2">
             <OllamaVersionIndicator />
           </div>
-        </div>
-      )}
+        )}
+      </div>
+
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
     </aside>
   );
 };
