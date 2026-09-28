@@ -17,7 +17,7 @@ export const MarkdownMessage = ({
   content,
   isUser = false,
 }: MarkdownMessageProps) => {
-  const highlighter = useHighlighter();
+  const loaded = useHighlighter();
 
   if (isUser) {
     return <div className="text-sm whitespace-pre-wrap">{content}</div>;
@@ -50,7 +50,8 @@ export const MarkdownMessage = ({
             return (
               <CodeBlock
                 className={className}
-                highlighter={highlighter}
+                highlighter={loaded?.highlighter ?? null}
+                theme={loaded?.theme ?? null}
                 inline={inline}
                 {...props}
               >

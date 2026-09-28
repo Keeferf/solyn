@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, Search, Settings, X } from "lucide-react";
-import { createHighlighter, type Highlighter } from "shiki";
 import {
   AVAILABLE_THEMES,
   getThemeType,
   useThemeStore,
 } from "@/stores/themeStore";
 import { CodeBlock } from "@/components/chat/CodeBlock";
+import { useHighlighter } from "@/components/chat/hooks/useHighlighter";
 
 const PREVIEW_CODE = `// Theme preview
 import { useState } from "react";
@@ -31,22 +31,14 @@ interface SettingsModalProps {
 }
 
 const ThemePreview = () => {
-  const { theme } = useThemeStore();
-  const [highlighter, setHighlighter] = useState<Highlighter | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    setHighlighter(null);
-    createHighlighter({ themes: [theme], langs: ["tsx"] }).then((hl) => {
-      if (active) setHighlighter(hl);
-    });
-    return () => {
-      active = false;
-    };
-  }, [theme]);
+  const loaded = useHighlighter();
 
   return (
-    <CodeBlock className="language-tsx" highlighter={highlighter}>
+    <CodeBlock
+      className="language-tsx"
+      highlighter={loaded?.highlighter ?? null}
+      theme={loaded?.theme ?? null}
+    >
       {PREVIEW_CODE}
     </CodeBlock>
   );

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createHighlighter, type Highlighter } from "shiki";
+import { getSingletonHighlighter, type Highlighter } from "shiki";
 import { useThemeStore } from "@/stores/themeStore";
 
 const SUPPORTED_LANGUAGES = [
@@ -37,27 +37,34 @@ const SUPPORTED_LANGUAGES = [
   "graphql",
 ];
 
-export const useHighlighter = () => {
-  const [highlighter, setHighlighter] = useState<Highlighter | null>(null);
-  const { theme } = useThemeStore();
+export interface LoadedHighlighter {
+  highlighter: Highlighter;
+  theme: string;
+}
+
+/**
+ * Shared Shiki highlighter. All code blocks reuse one instance, and the
+ * previously loaded theme is kept until the next one finishes loading so
+ * blocks never flash to an unstyled state when the theme changes.
+ */
+export const useHighlighter = (): LoadedHighlighter | null => {
+  const theme = useThemeStore((state) => state.theme);
+  const [loaded, setLoaded] = useState<LoadedHighlighter | null>(null);
 
   useEffect(() => {
-    let isMounted = true;
+    let active = true;
 
-    createHighlighter({
+    getSingletonHighlighter({
       themes: [theme],
       langs: SUPPORTED_LANGUAGES,
-    }).then((hl) => {
-      if (isMounted) {
-        setHighlighter(hl);
-      }
+    }).then((highlighter) => {
+      if (active) setLoaded({ highlighter, theme });
     });
 
     return () => {
-      isMounted = false;
-      setHighlighter(null);
+      active = false;
     };
   }, [theme]);
 
-  return highlighter;
+  return loaded;
 };
