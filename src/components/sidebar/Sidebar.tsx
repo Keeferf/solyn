@@ -108,7 +108,7 @@ export const Sidebar = ({
         />
 
         {!isCollapsed && (
-          <div className="flex items-center justify-end px-3 py-2">
+          <div className="[&:not(:empty)]:mt-2">
             <OllamaVersionIndicator />
           </div>
         )}

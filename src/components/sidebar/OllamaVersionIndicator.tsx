@@ -150,9 +150,12 @@ export const OllamaVersionIndicator = () => {
       // Keep isOutdated true so the error branch below is reachable and the
       // button can return for a retry. Forcing it false hid the failure and
       // made the button vanish silently.
-      setUpdateError(error instanceof Error ? error.message : "Update failed");
+      // Tauri rejects with the plain `Err(String)` payload, not an Error.
+      setUpdateError(typeof error === "string" ? error : "Update failed");
       setUpdating(false);
-      setTimeout(() => setUpdateError(null), 8000);
+      // Reset after a moment so the Update button returns and a retry opens a
+      // fresh terminal instead of leaving the spinner up.
+      setTimeout(() => setUpdateError(null), 2000);
     }
   };
 
@@ -160,9 +163,11 @@ export const OllamaVersionIndicator = () => {
   if (!isOutdated || !status?.installed || !status?.running) {
     if (updateSuccess) {
       return (
-        <div className="flex items-center gap-1.5 px-2 py-1 bg-green-500/10 border border-green-500/20 rounded-lg text-xs">
-          <CircleCheck className="w-3 h-3 text-green-500 shrink-0" />
-          <span className="font-medium text-green-500">Updated!</span>
+        <div className="w-full flex items-center gap-3 px-3 py-1.5 rounded-lg bg-success-bg border border-success-border">
+          <span className="w-5 h-5 flex items-center justify-center shrink-0">
+            <CircleCheck className="w-4 h-4 text-success" />
+          </span>
+          <span className="text-xs font-medium text-success">Updated!</span>
         </div>
       );
     }
@@ -172,11 +177,15 @@ export const OllamaVersionIndicator = () => {
   if (updateError) {
     return (
       <div
-        className="flex items-center gap-1.5 px-2 py-1 bg-red-500/10 border border-red-500/20 rounded-lg text-xs max-w-48"
+        className="w-full flex items-center gap-3 px-3 py-1.5 rounded-lg bg-error-bg border border-error-border"
         title={updateError}
       >
-        <CircleAlert className="w-3 h-3 text-red-500 shrink-0" />
-        <span className="font-medium text-red-500 truncate">{updateError}</span>
+        <span className="w-5 h-5 flex items-center justify-center shrink-0">
+          <CircleAlert className="w-4 h-4 text-error" />
+        </span>
+        <span className="text-xs font-medium text-error truncate">
+          {updateError}
+        </span>
       </div>
     );
   }
@@ -186,21 +195,25 @@ export const OllamaVersionIndicator = () => {
     <button
       onClick={handleUpdate}
       disabled={updating}
-      className="flex items-center gap-1.5 px-2 py-1 bg-green-500/10 border border-green-500/20 rounded-lg hover:bg-green-500/20 transition-all group cursor-pointer text-xs min-w-20 justify-center"
+      className="w-full flex items-center gap-3 px-3 py-1.5 rounded-lg bg-success-bg border border-success-border hover:bg-success/20 disabled:cursor-default cursor-pointer group"
       title={`Update Ollama from ${status.version} to ${latestVersion}`}
     >
       {updating ? (
         <>
-          <RefreshCw className="w-3 h-3 text-green-500 animate-spin shrink-0" />
-          <span className="font-medium text-green-500">
-            {progress > 0 ? `${Math.round(progress)}%` : "Updating..."}
+          <span className="w-5 h-5 flex items-center justify-center shrink-0">
+            <RefreshCw className="w-4 h-4 text-success animate-spin" />
+          </span>
+          <span className="text-xs font-medium text-success">
+            {progress > 0 ? `${Math.round(progress)}%` : "Updating Ollama..."}
           </span>
         </>
       ) : (
         <>
-          <CircleAlert className="w-3 h-3 text-green-500 shrink-0" />
-          <span className="font-medium text-green-500 whitespace-nowrap">
-            Update to {latestVersion}
+          <span className="w-5 h-5 flex items-center justify-center shrink-0">
+            <CircleAlert className="w-4 h-4 text-success" />
+          </span>
+          <span className="text-xs font-medium text-success text-left">
+            Update to Ollama v{latestVersion}
           </span>
         </>
       )}

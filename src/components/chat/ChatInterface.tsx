@@ -1,6 +1,6 @@
 // src/components/chat/ChatInterface.tsx
 import { useState, useEffect } from "react";
-import { X, Plus, Pen, Trash } from "lucide-react";
+import { X, Plus, Pen, Trash, FileText } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { ChatInput } from "./ChatInput";
 import { ChatControls } from "./ChatControls";
@@ -50,14 +50,10 @@ export const ChatInterface = () => {
   };
 
   const { input, setInput, textareaRef, resetInput } = useChatInput();
-  const {
-    isAttachmentEnabled,
-    attachments,
-    fileInputRef,
-    handleAttachmentClick,
-    handleFileChange,
-    clearAttachments,
-  } = useFileAttachment();
+  const { pickAttachments, removeAttachment } = useFileAttachment(
+    currentSettings.attachments,
+    (attachments) => updateSettings({ ...currentSettings, attachments }),
+  );
   const {
     selectedModel,
     models,
@@ -119,16 +115,8 @@ export const ChatInterface = () => {
       models.length > 0 &&
       selectedModelData
     ) {
-      let message = input.trim();
-
-      if (attachments.length > 0) {
-        const attachmentNames = attachments.map((f) => f.name).join(", ");
-        message = `${message}\n\n[Attachments: ${attachmentNames}]`;
-        clearAttachments();
-      }
-
       resetInput();
-      await sendMessage(message);
+      await sendMessage(input.trim());
     }
   };
 
@@ -201,9 +189,40 @@ export const ChatInterface = () => {
     !isOllamaReady ||
     !selectedModelData?.ollama_model_name;
 
-  const attachmentCount = attachments.length;
+  const attachmentCount = currentSettings.attachments.length;
   const hasMessages = currentMessages.length > 0;
   const combinedError = storeError || hookError;
+
+  const attachmentTray = attachmentCount > 0 && (
+    <div className="flex flex-wrap items-center gap-2 px-4 pb-2">
+      {currentSettings.attachments.map((file, index) => (
+        <div
+          key={`${file.path}-${index}`}
+          title={file.error ?? file.path}
+          className="relative flex w-16 flex-col items-center gap-1 rounded-lg bg-white/5 px-2 py-2"
+        >
+          <FileText
+            size={22}
+            className={file.error ? "text-red-400/70" : "text-white/70"}
+          />
+          <span
+            className={`max-w-full truncate text-[10px] leading-tight ${
+              file.error ? "text-red-400 line-through" : "text-white/50"
+            }`}
+          >
+            {file.name}
+          </span>
+          <button
+            onClick={() => removeAttachment(index)}
+            aria-label={`Remove ${file.name}`}
+            className="absolute -right-2 -top-2 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-black text-white/50 transition-colors hover:border-red-400/50 hover:text-red-400"
+          >
+            <X size={12} />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="w-full max-w-3xl mx-auto h-full flex flex-col relative">
@@ -303,17 +322,7 @@ export const ChatInterface = () => {
           </div>
 
           <div className="shrink-0 w-full sticky bottom-0 bg-black pb-4">
-            {attachmentCount > 0 && (
-              <div className="px-4 py-2 text-xs text-white/60 bg-black border-t border-white/5">
-                {attachmentCount} file{attachmentCount > 1 ? "s" : ""} attached
-                <button
-                  onClick={clearAttachments}
-                  className="ml-2 text-red-400 hover:text-red-300"
-                >
-                  Clear
-                </button>
-              </div>
-            )}
+            {attachmentTray}
 
             <div className="relative bg-black rounded-2xl border border-white/5 transition-colors">
               <ChatInput
@@ -329,8 +338,8 @@ export const ChatInterface = () => {
                 onSearchToggle={toggleSearch}
                 isCodeEnabled={isCodeEnabled}
                 onCodeToggle={toggleCode}
-                isAttachmentEnabled={isAttachmentEnabled}
-                onAttachmentClick={handleAttachmentClick}
+                hasAttachments={attachmentCount > 0}
+                onAttachmentClick={pickAttachments}
                 selectedModel={selectedModel}
                 models={models}
                 isModelDropdownOpen={isModelDropdownOpen}
@@ -342,8 +351,6 @@ export const ChatInterface = () => {
                 onModeToggle={toggleMode}
                 onSubmit={handleSubmit}
                 isSubmitDisabled={isSubmitDisabled}
-                fileInputRef={fileInputRef}
-                onFileChange={handleFileChange}
               />
             </div>
 
@@ -368,18 +375,7 @@ export const ChatInterface = () => {
             </div>
 
             <div className="w-full max-w-3xl mt-8">
-              {attachmentCount > 0 && (
-                <div className="px-4 py-2 text-xs text-white/60 bg-black border-t border-white/5">
-                  {attachmentCount} file{attachmentCount > 1 ? "s" : ""}{" "}
-                  attached
-                  <button
-                    onClick={clearAttachments}
-                    className="ml-2 text-red-400 hover:text-red-300"
-                  >
-                    Clear
-                  </button>
-                </div>
-              )}
+              {attachmentTray}
 
               <div className="relative bg-black rounded-2xl border border-white/5 transition-colors">
                 <ChatInput
@@ -395,8 +391,8 @@ export const ChatInterface = () => {
                   onSearchToggle={toggleSearch}
                   isCodeEnabled={isCodeEnabled}
                   onCodeToggle={toggleCode}
-                  isAttachmentEnabled={isAttachmentEnabled}
-                  onAttachmentClick={handleAttachmentClick}
+                  hasAttachments={attachmentCount > 0}
+                  onAttachmentClick={pickAttachments}
                   selectedModel={selectedModel}
                   models={models}
                   isModelDropdownOpen={isModelDropdownOpen}
@@ -408,8 +404,6 @@ export const ChatInterface = () => {
                   onModeToggle={toggleMode}
                   onSubmit={handleSubmit}
                   isSubmitDisabled={isSubmitDisabled}
-                  fileInputRef={fileInputRef}
-                  onFileChange={handleFileChange}
                 />
               </div>
 
