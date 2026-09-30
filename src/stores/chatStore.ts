@@ -20,10 +20,20 @@ export interface ChatSession {
 
 export type ChatMode = "chat" | "agent";
 
+export interface AttachmentMeta {
+  path: string;
+  name: string;
+  bytes: number;
+  chars: number;
+  truncated: boolean;
+  error?: string | null;
+}
+
 export interface SessionSettings {
   mode: ChatMode;
   code: boolean;
   web: boolean;
+  attachments: AttachmentMeta[];
   options?: {
     temperature?: number;
     top_p?: number;
@@ -36,6 +46,7 @@ export const defaultSessionSettings: SessionSettings = {
   mode: "chat",
   code: false,
   web: false,
+  attachments: [],
 };
 
 /** Parse the JSON blob stored on a session, falling back to defaults. */
