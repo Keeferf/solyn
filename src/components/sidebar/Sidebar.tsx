@@ -107,7 +107,11 @@ export const Sidebar = ({
           collapsed={isCollapsed}
         />
 
-        {!isCollapsed && <OllamaVersionIndicator />}
+        {!isCollapsed && (
+          <div className="[&:not(:empty)]:mt-2">
+            <OllamaVersionIndicator />
+          </div>
+        )}
       </div>
 
       <SettingsModal
