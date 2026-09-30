@@ -9,11 +9,14 @@
 mod budget;
 mod prompts;
 
-pub use budget::{estimate_messages_tokens, estimate_tokens, trim_to_budget, DEFAULT_NUM_CTX};
+pub use budget::{
+    estimate_messages_tokens, estimate_tokens, trim_to_budget, CHARS_PER_TOKEN, DEFAULT_NUM_CTX,
+};
 pub use prompts::compose_system_prompt;
 
 use serde::{Deserialize, Serialize};
 
+use crate::core::attachments::AttachmentMeta;
 use crate::core::ollama::chat::{ChatMessage, ChatOptions};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -47,12 +50,24 @@ pub struct SessionSettings {
     pub web: bool,
     #[serde(default)]
     pub options: OptionOverrides,
+    /// Files attached for the whole session. Only paths/metadata are persisted;
+    /// contents are re-read at send time.
+    #[serde(default)]
+    pub attachments: Vec<AttachmentMeta>,
+}
+
+/// A delimited chunk of external content (an attached file now, RAG later).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContextBlock {
+    pub label: String,
+    pub content: String,
 }
 
 pub struct ContextInput {
     pub settings: SessionSettings,
     pub history: Vec<ChatMessage>,
     pub user_message: String,
+    pub context_blocks: Vec<ContextBlock>,
 }
 
 pub struct AssembledContext {
@@ -92,7 +107,7 @@ pub fn build_options(settings: &SessionSettings) -> ChatOptions {
 /// followed by the new user turn. Reasoning (`thinking`) is never sent back to
 /// the model.
 pub fn build_context(input: ContextInput) -> AssembledContext {
-    let system = compose_system_prompt(&input.settings);
+    let persona = compose_system_prompt(&input.settings);
     let num_ctx = resolve_num_ctx(&input.settings) as usize;
 
     let mut convo: Vec<ChatMessage> = input
@@ -113,9 +128,18 @@ pub fn build_context(input: ContextInput) -> AssembledContext {
     // ponytail: reserve a quarter of the window for the reply. Tighten once
     // num_predict is set per session.
     let output_reserve = num_ctx / 4;
-    let budget = num_ctx
-        .saturating_sub(output_reserve)
-        .saturating_sub(estimate_tokens(&system));
+    let window = num_ctx.saturating_sub(output_reserve);
+
+    // Attachments live on the system message so trimming can never drop them.
+    // They get at most half the free window, so a large file can't starve the
+    // conversation.
+    let files_budget = window.saturating_sub(estimate_tokens(&persona)) / 2;
+    let system = match render_session_files(&input.context_blocks, files_budget) {
+        Some(files) => format!("{persona}\n\n{files}"),
+        None => persona,
+    };
+
+    let budget = window.saturating_sub(estimate_tokens(&system));
 
     let mut messages = Vec::with_capacity(convo.len() + 1);
     messages.push(ChatMessage {
@@ -129,6 +153,46 @@ pub fn build_context(input: ContextInput) -> AssembledContext {
         messages,
         options: build_options(&input.settings),
     }
+}
+
+/// Render attachment contents into one framed section, clipped to `budget_tokens`.
+/// Returns `None` when there is nothing to add.
+fn render_session_files(blocks: &[ContextBlock], budget_tokens: usize) -> Option<String> {
+    if blocks.is_empty() || budget_tokens < 32 {
+        return None;
+    }
+
+    let max_chars = budget_tokens.saturating_mul(CHARS_PER_TOKEN);
+    let mut out = String::from("Session files attached by the user:");
+    let mut used = 0usize;
+
+    for block in blocks {
+        let header = format!("\n\n--- BEGIN FILE: {} ---\n", block.label);
+        let footer = format!("\n--- END FILE: {} ---", block.label);
+        let fixed = header.chars().count() + footer.chars().count();
+        let body = block.content.chars().count();
+
+        if used + fixed + body > max_chars {
+            let remaining = max_chars.saturating_sub(used + fixed);
+            if remaining == 0 {
+                break;
+            }
+            out.push_str(&header);
+            out.extend(block.content.chars().take(remaining));
+            if !block.content.ends_with("[... truncated ...]") {
+                out.push_str("\n[... truncated ...]");
+            }
+            out.push_str(&footer);
+            break;
+        }
+
+        out.push_str(&header);
+        out.push_str(&block.content);
+        out.push_str(&footer);
+        used += fixed + body;
+    }
+
+    Some(out)
 }
 
 #[cfg(test)]
@@ -153,6 +217,7 @@ mod tests {
             settings: settings(),
             history: vec![msg("user", "hi"), msg("assistant", "hello")],
             user_message: "how are you".into(),
+            context_blocks: Vec::new(),
         });
         assert_eq!(ctx.messages[0].role, "system");
         assert!(ctx.messages[0].content.contains("Solyn"));
@@ -204,6 +269,7 @@ mod tests {
             settings: settings(),
             history: vec![prior],
             user_message: "next".into(),
+            context_blocks: Vec::new(),
         });
         assert!(ctx.messages.iter().all(|m| m.thinking.is_none()));
     }
@@ -222,6 +288,7 @@ mod tests {
             settings: settings(),
             history,
             user_message: "final".into(),
+            context_blocks: Vec::new(),
         });
         // Trimming happened, system survived, and the current turn is intact.
         assert!(ctx.messages.len() < 52);
@@ -230,5 +297,47 @@ mod tests {
         // Every conversation turn (everything after the system message) starts
         // with a user message.
         assert_eq!(ctx.messages[1].role, "user");
+    }
+
+    #[test]
+    fn session_files_are_added_to_the_system_message() {
+        let ctx = build_context(ContextInput {
+            settings: settings(),
+            history: Vec::new(),
+            user_message: "summarize this".into(),
+            context_blocks: vec![ContextBlock {
+                label: "notes.txt".into(),
+                content: "the answer is 42".into(),
+            }],
+        });
+        assert_eq!(ctx.messages[0].role, "system");
+        assert!(ctx.messages[0].content.contains("BEGIN FILE: notes.txt"));
+        assert!(ctx.messages[0].content.contains("the answer is 42"));
+    }
+
+    #[test]
+    fn session_files_are_clipped_and_do_not_drop_the_newest_turn() {
+        let ctx = build_context(ContextInput {
+            settings: settings(),
+            history: Vec::new(),
+            user_message: "keep me".into(),
+            context_blocks: vec![ContextBlock {
+                label: "huge.txt".into(),
+                content: "x".repeat(100_000),
+            }],
+        });
+        assert_eq!(ctx.messages.last().unwrap().content, "keep me");
+        assert!(ctx.messages[0].content.contains("[... truncated ...]"));
+    }
+
+    #[test]
+    fn no_context_blocks_leaves_the_system_message_clean() {
+        let ctx = build_context(ContextInput {
+            settings: settings(),
+            history: Vec::new(),
+            user_message: "hi".into(),
+            context_blocks: Vec::new(),
+        });
+        assert!(!ctx.messages[0].content.contains("Session files"));
     }
 }

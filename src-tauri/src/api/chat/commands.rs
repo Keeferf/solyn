@@ -5,10 +5,12 @@ use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::Mutex;
 
 use super::contracts::*;
+use crate::core::attachments::{probe_attachment, read_attachment_blocks, AttachmentMeta};
 use crate::core::context::{build_context, ContextInput, SessionSettings};
 use crate::core::ollama::chat::{ChatEvent, ChatMessage, OllamaChatClient};
 use crate::core::ollama::models::OllamaModelClient;
 use crate::data::chat::{ChatDatabase, ChatSession, ChatSessionWithMessages};
+use tauri_plugin_dialog::DialogExt;
 
 pub fn init_chat_state(app: &tauri::App) {
     let ollama_state = OllamaState {
@@ -153,6 +155,7 @@ pub async fn send_chat_stream(
             })
             .collect(),
         user_message: request.message.clone(),
+        context_blocks: read_attachment_blocks(&request.settings.attachments),
     });
 
     let mut receiver = {
@@ -237,4 +240,26 @@ pub async fn update_chat_session_settings(
     let settings_json = serde_json::to_string(&settings)
         .map_err(|e| format!("Failed to serialize settings: {}", e))?;
     db.update_session_settings(session_id, &settings_json).await
+}
+
+/// Open the native multi-file picker and return metadata for each selection.
+/// Called from Rust, so no dialog capability entry is needed. Cancelling yields
+/// an empty list.
+#[tauri::command]
+pub async fn pick_attachments(app_handle: AppHandle) -> Result<Vec<AttachmentMeta>, String> {
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    app_handle
+        .dialog()
+        .file()
+        .set_title("Attach files")
+        .pick_files(move |paths| {
+            let _ = tx.send(paths);
+        });
+
+    let paths = rx.await.map_err(|e| e.to_string())?;
+    Ok(paths
+        .unwrap_or_default()
+        .into_iter()
+        .map(|path| probe_attachment(&path.to_string()))
+        .collect())
 }

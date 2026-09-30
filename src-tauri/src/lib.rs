@@ -30,6 +30,7 @@ pub fn run() {
         })
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             // Ollama commands
             api::ollama::commands::download_ollama,
@@ -82,6 +83,7 @@ pub fn run() {
             api::chat::commands::update_chat_session_title,
             api::chat::commands::update_chat_session_settings,
             api::chat::commands::add_message_to_session,
+            api::chat::commands::pick_attachments,
             // Chat commands
             api::chat::commands::send_chat_stream,
         ])
