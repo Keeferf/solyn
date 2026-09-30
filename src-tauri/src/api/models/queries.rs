@@ -17,23 +17,13 @@ pub async fn fetch_huggingface_models_page(
     filter: Option<String>,
 ) -> Result<Vec<HFModelSummary>, String> {
     let limit = limit.unwrap_or(20);
-    let filter = match filter.as_deref() {
-        Some("most_downloads") => ModelFilter::MostDownloads,
-        Some("most_liked") => ModelFilter::MostLiked,
-        Some("recent") => ModelFilter::Recent,
-        _ => ModelFilter::default(),
-    };
+    let filter = parse_filter(filter.as_deref());
     fetch_hugging_face_models_page(page, limit, &filter).await
 }
 
 #[tauri::command]
 pub async fn get_huggingface_model_count(filter: Option<String>) -> Result<usize, String> {
-    let filter = match filter.as_deref() {
-        Some("most_downloads") => ModelFilter::MostDownloads,
-        Some("most_liked") => ModelFilter::MostLiked,
-        Some("recent") => ModelFilter::Recent,
-        _ => ModelFilter::default(),
-    };
+    let filter = parse_filter(filter.as_deref());
     get_total_model_count_for_filter(&filter).await
 }
 
@@ -50,12 +40,7 @@ pub async fn search_huggingface_models(
     filter: Option<String>,
 ) -> Result<SearchModelsResponse, String> {
     let limit = limit.unwrap_or(20);
-    let filter = match filter.as_deref() {
-        Some("most_downloads") => ModelFilter::MostDownloads,
-        Some("most_liked") => ModelFilter::MostLiked,
-        Some("recent") => ModelFilter::Recent,
-        _ => ModelFilter::default(),
-    };
+    let filter = parse_filter(filter.as_deref());
     search_hugging_face_models(&query, page, limit, &filter).await
 }
 
@@ -64,12 +49,7 @@ pub async fn get_huggingface_search_count(
     query: String,
     filter: Option<String>,
 ) -> Result<usize, String> {
-    let filter = match filter.as_deref() {
-        Some("most_downloads") => ModelFilter::MostDownloads,
-        Some("most_liked") => ModelFilter::MostLiked,
-        Some("recent") => ModelFilter::Recent,
-        _ => ModelFilter::default(),
-    };
+    let filter = parse_filter(filter.as_deref());
     get_search_model_count(&query, &filter).await
 }
 

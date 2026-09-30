@@ -1,4 +1,5 @@
 minimumReleaseAgeExclude:
+  - '@tauri-apps/plugin-opener@2.6.0'
   - '@tailwindcss/node@4.3.3'
   - '@tailwindcss/oxide-android-arm64@4.3.3'
   - '@tailwindcss/oxide-freebsd-x64@4.3.3'

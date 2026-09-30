@@ -239,6 +239,13 @@ pub async fn execute_ollama_update(
                     .await
                     .map_err(|e| format!("Failed to prepare update script: {}", e))?;
 
+                let launcher_path = write_update_launcher(&script_path)
+                    .await
+                    .map_err(|e| format!("Failed to prepare update launcher: {}", e))?;
+
+                // Drop any state left by a previous attempt so a retry starts clean.
+                let _ = tokio::fs::remove_file(terminal_state_path()).await;
+
                 broadcast_terminal_line(
                     &window_clone,
                     "🔒 Opening a terminal for the sudo password...",
@@ -250,7 +257,7 @@ pub async fn execute_ollama_update(
                     "info", false
                 );
 
-                launch_wsl_update_terminal(&script_path)?;
+                launch_wsl_update_terminal(&launcher_path)?;
                 launched_in_terminal = true;
                 (String::new(), Vec::new())
             } else {
@@ -348,6 +355,24 @@ pub async fn execute_ollama_update(
     while attempts < max_attempts {
         tokio::time::sleep(Duration::from_secs(2)).await;
         attempts += 1;
+
+        // When the update was handed to a terminal, the launcher records its
+        // shell PID and then the exit code in a state file. If that shell is
+        // gone but no exit code was written, the user closed the window before
+        // finishing — stop spinning and let the UI offer the button again.
+        if launched_in_terminal {
+            if let Ok(raw) = tokio::fs::read_to_string(terminal_state_path()).await {
+                match parse_terminal_state(&raw) {
+                    TerminalState::Running(pid) if !terminal_process_alive(pid) => {
+                        return Err("Ollama update cancelled".to_string());
+                    }
+                    TerminalState::Exited(code) if code != 0 => {
+                        return Err(format!("Ollama update failed (exit code {})", code));
+                    }
+                    _ => {}
+                }
+            }
+        }
 
         // Check if Ollama is installed
         match is_ollama_installed().await {
@@ -623,14 +648,18 @@ async fn write_update_script() -> Result<std::path::PathBuf, String> {
 /// Open a Windows terminal (via WSL interop) running the update under `sudo`,
 /// so the password prompt has a TTY. WSL has no polkit agent, so this is the
 /// only way to elevate without pre-configuring passwordless sudo.
-fn launch_wsl_update_terminal(script_path: &std::path::Path) -> Result<(), String> {
+///
+/// `launcher_path` is the shell script the terminal runs; it records its PID
+/// and exit code so the caller can detect the window being closed.
+fn launch_wsl_update_terminal(launcher_path: &std::path::Path) -> Result<(), String> {
     use std::process::{Command, Stdio};
 
-    let script = script_path.to_string_lossy().to_string();
+    let launcher = launcher_path.to_string_lossy().to_string();
     let distro = std::env::var("WSL_DISTRO_NAME").unwrap_or_default();
 
-    // `wsl.exe -d <distro> -e sudo sh <script>` runs inside this distro with a
-    // real TTY attached to the new window, so sudo can prompt.
+    // `wsl.exe -d <distro> -e sh <launcher>` runs inside this distro with a
+    // real TTY attached to the new window, so sudo can prompt. The launcher
+    // then elevates.
     //
     // `wt.exe` cannot be launched from WSL (its execution alias doesn't work
     // there) and misparses the wsl flags, so go through cmd.exe's `start`, which
@@ -640,12 +669,7 @@ fn launch_wsl_update_terminal(script_path: &std::path::Path) -> Result<(), Strin
         args.push("-d".to_string());
         args.push(distro);
     }
-    args.extend([
-        "-e".to_string(),
-        "sudo".to_string(),
-        "sh".to_string(),
-        script,
-    ]);
+    args.extend(["-e".to_string(), "sh".to_string(), launcher]);
 
     // The absolute path covers `appendWindowsPath=false`.
     let candidates: [(&str, Vec<String>); 2] = [
@@ -671,6 +695,61 @@ fn launch_wsl_update_terminal(script_path: &std::path::Path) -> Result<(), Strin
          Run the update in a terminal instead."
             .to_string(),
     )
+}
+
+/// Path the terminal launcher uses to report its PID, then its exit code.
+fn terminal_state_path() -> std::path::PathBuf {
+    std::env::temp_dir().join(format!("solyn-ollama-update-{}.state", std::process::id()))
+}
+
+/// What the launcher has written so far: nothing yet, its shell PID while the
+/// password prompt / update runs, or the final exit code.
+enum TerminalState {
+    Starting,
+    Running(u32),
+    Exited(i32),
+}
+
+fn parse_terminal_state(raw: &str) -> TerminalState {
+    let raw = raw.trim();
+    if let Some(code) = raw.strip_prefix("exit:") {
+        if let Ok(code) = code.trim().parse::<i32>() {
+            return TerminalState::Exited(code);
+        }
+    }
+    if let Ok(pid) = raw.parse::<u32>() {
+        return TerminalState::Running(pid);
+    }
+    TerminalState::Starting
+}
+
+/// Whether the launcher shell is still running. Same distro as the app, so a
+/// missing `/proc/<pid>` means the terminal was closed.
+fn terminal_process_alive(pid: u32) -> bool {
+    std::path::Path::new("/proc").join(pid.to_string()).exists()
+}
+
+/// Write the shell script the update terminal runs. It records its PID before
+/// the sudo prompt (so a cancelled prompt is detectable) and the exit code
+/// afterwards. The app polls `terminal_state_path` while it waits.
+async fn write_update_launcher(script_path: &std::path::Path) -> Result<std::path::PathBuf, String> {
+    let state = terminal_state_path();
+    let launcher = std::env::temp_dir().join(format!(
+        "solyn-ollama-update-{}-launch.sh",
+        std::process::id()
+    ));
+
+    let content = format!(
+        "echo $$ > '{state}'\nsudo sh '{script}'\ncode=$?\necho \"exit:$code\" > '{state}'\nexit $code\n",
+        state = state.display(),
+        script = script_path.display(),
+    );
+
+    tokio::fs::write(&launcher, content)
+        .await
+        .map_err(|e| format!("Failed to write update launcher: {}", e))?;
+
+    Ok(launcher)
 }
 
 /// Write the Ollama install script to a temp file. The elevated helper
@@ -753,4 +832,38 @@ pub async fn check_package_manager_ollama() -> Result<bool, String> {
 #[cfg(not(target_os = "linux"))]
 pub async fn check_package_manager_ollama() -> Result<bool, String> {
     Ok(false)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_terminal_state_file() {
+        // Nothing written yet (or whitespace) — still starting.
+        assert!(matches!(parse_terminal_state(""), TerminalState::Starting));
+        assert!(matches!(
+            parse_terminal_state("  \n"),
+            TerminalState::Starting
+        ));
+
+        // The launcher's shell PID while it waits for sudo.
+        assert!(matches!(
+            parse_terminal_state("1234\n"),
+            TerminalState::Running(1234)
+        ));
+
+        // Final exit code once the update finishes.
+        assert!(matches!(parse_terminal_state("exit:0"), TerminalState::Exited(0)));
+        assert!(matches!(
+            parse_terminal_state("exit:42\n"),
+            TerminalState::Exited(42)
+        ));
+
+        // Garbage falls through to Starting rather than panicking.
+        assert!(matches!(
+            parse_terminal_state("exit:abc"),
+            TerminalState::Starting
+        ));
+    }
 }

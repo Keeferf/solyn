@@ -10,7 +10,7 @@ interface ChatControlsProps {
   onSearchToggle: () => void;
   isCodeEnabled: boolean;
   onCodeToggle: () => void;
-  isAttachmentEnabled: boolean;
+  hasAttachments: boolean;
   onAttachmentClick: () => void;
   selectedModel: ModelType;
   models: ChatModel[];
@@ -23,8 +23,6 @@ interface ChatControlsProps {
   onModeToggle: () => void;
   onSubmit: () => void;
   isSubmitDisabled: boolean;
-  fileInputRef: React.RefObject<HTMLInputElement | null>;
-  onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 export const ChatControls = ({
@@ -32,7 +30,7 @@ export const ChatControls = ({
   onSearchToggle,
   isCodeEnabled,
   onCodeToggle,
-  isAttachmentEnabled,
+  hasAttachments,
   onAttachmentClick,
   selectedModel,
   models,
@@ -45,14 +43,12 @@ export const ChatControls = ({
   onModeToggle,
   onSubmit,
   isSubmitDisabled,
-  fileInputRef,
-  onFileChange,
 }: ChatControlsProps) => {
   return (
     <div className="flex items-center justify-between p-2 border-t border-white/5">
       <div className="flex items-center gap-1">
         <ToggleButton
-          isActive={isAttachmentEnabled}
+          isActive={hasAttachments}
           onClick={onAttachmentClick}
           icon={<Paperclip size={18} />}
         />
@@ -65,13 +61,6 @@ export const ChatControls = ({
           isActive={isCodeEnabled}
           onClick={onCodeToggle}
           icon={<Terminal size={18} />}
-        />
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          onChange={onFileChange}
-          className="hidden"
         />
       </div>
 
