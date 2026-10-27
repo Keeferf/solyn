@@ -11,6 +11,20 @@ use tauri;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    #[cfg(target_os = "linux")]
+    {
+        let is_wsl = std::env::var_os("WSL_INTEROP").is_some()
+            || std::fs::read_to_string("/proc/sys/kernel/osrelease")
+                .map(|v| v.to_lowercase().contains("microsoft"))
+                .unwrap_or(false);
+
+        if is_wsl && std::env::var_os("WEBKIT_DISABLE_COMPOSITING_MODE").is_none() {
+            // WebKit's accelerated compositing is slow over WSLg's faux_driver EGL.
+            // Force software painting. Safe: runs before any thread is spawned.
+            unsafe { std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1") };
+        }
+    }
+
     // Create status monitor
     let status_monitor = events::OllamaStatusMonitor::new();
 
