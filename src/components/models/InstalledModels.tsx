@@ -9,6 +9,8 @@ import {
   CircleAlert,
 } from "lucide-react";
 import { useInstalledModels, InstalledModel } from "./hooks/useInstalledModels";
+import { Skeleton } from "../ui/Skeleton";
+import { useSkeletonCount } from "../ui/useSkeletonCount";
 
 interface InstalledModelsProps {
   onModelClick?: (model: InstalledModel) => void;
@@ -44,6 +46,7 @@ const groupFilesByQuant = (files: InstalledModel["files"]) => {
 export const InstalledModels = ({ onModelClick }: InstalledModelsProps) => {
   const {
     models,
+    allModels,
     loading,
     error,
     searchQuery,
@@ -52,6 +55,15 @@ export const InstalledModels = ({ onModelClick }: InstalledModelsProps) => {
     deleteQuantization,
     refresh,
   } = useInstalledModels();
+
+  const { ref: skeletonRef, count: skeletonCount } =
+    useSkeletonCount<HTMLDivElement>({
+      columns: 1,
+      itemHeight: 132,
+      gap: 16,
+      minCount: 4,
+      maxCount: 12,
+    });
 
   const [deleting, setDeleting] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(
@@ -83,7 +95,7 @@ export const InstalledModels = ({ onModelClick }: InstalledModelsProps) => {
     setSearchQuery("");
   };
 
-  if (loading) {
+  if (loading && allModels.length === 0) {
     return (
       <div className="w-full space-y-6">
         <div className="flex items-center justify-between text-sm text-white/40 px-2 py-2 bg-black/50 rounded-lg border border-white/5">
@@ -92,10 +104,32 @@ export const InstalledModels = ({ onModelClick }: InstalledModelsProps) => {
             <span>Loading installed models...</span>
           </div>
         </div>
-        <div className="flex items-center justify-center py-16">
-          <div className="animate-spin text-purple-accent">
-            <RefreshCw size={32} />
-          </div>
+        <div ref={skeletonRef} className="space-y-4" aria-hidden="true">
+          {Array.from({ length: skeletonCount }).map((_, index) => (
+            <div
+              key={index}
+              className="bg-black/50 border border-white/10 rounded-xl p-5"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-5 w-5 rounded" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-48" />
+                      <Skeleton className="h-3 w-40" />
+                    </div>
+                  </div>
+                  <div className="mt-3 ml-9 flex flex-wrap gap-2">
+                    <Skeleton className="h-6 w-28 rounded" />
+                    <Skeleton className="h-6 w-28 rounded" />
+                  </div>
+                </div>
+                <div className="ml-4 shrink-0">
+                  <Skeleton className="h-8 w-8 rounded-lg" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );

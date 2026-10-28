@@ -1,5 +1,4 @@
 import {
-  Loader,
   Server,
   User,
   RefreshCw,
@@ -9,6 +8,8 @@ import {
 } from "lucide-react";
 import { HFModelSummary } from "./hooks/useHuggingFaceModels";
 import { RingSpinner } from "../ui/RingSpinner";
+import { Skeleton } from "../ui/Skeleton";
+import { useSkeletonCount } from "../ui/useSkeletonCount";
 
 interface BrowseModelsProps {
   models: HFModelSummary[];
@@ -64,6 +65,15 @@ export const BrowseModels = ({
   isSearching = false,
   onClearSearch,
 }: BrowseModelsProps) => {
+  const { ref: skeletonRef, count: skeletonCount } =
+    useSkeletonCount<HTMLDivElement>({
+      itemMinWidth: 280,
+      itemHeight: 168,
+      gap: 16,
+      minCount: 8,
+      maxCount: 48,
+    });
+
   if (loading && models.length === 0) {
     return (
       <div className="w-full space-y-6">
@@ -73,8 +83,32 @@ export const BrowseModels = ({
             <span>Loading GGUF models from Hugging Face...</span>
           </div>
         </div>
-        <div className="flex items-center justify-center py-16">
-          <Loader className="animate-spin text-purple-accent" size={40} />
+        <div
+          ref={skeletonRef}
+          aria-hidden="true"
+          className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4"
+        >
+          {Array.from({ length: skeletonCount }).map((_, index) => (
+            <div
+              key={index}
+              className="bg-black border border-white/10 rounded-xl p-5 flex flex-col h-full"
+            >
+              <div className="mb-3 space-y-2">
+                <Skeleton className="h-5 w-2/3" />
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-3 w-3 rounded-full" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 mb-3">
+                <Skeleton className="h-6 w-16 rounded-full" />
+                <Skeleton className="h-6 w-16 rounded-full" />
+              </div>
+              <div className="flex items-center justify-end mt-auto pt-3 border-t border-white/5">
+                <Skeleton className="h-3 w-32" />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );
