@@ -34,10 +34,10 @@ base64 = "0.23.1"
 arboard = "3.6.1"
 num_cpus = "1.17.0"
 chrono = { version = "0.4.45", features = ["serde"] }  
-sysinfo = { version = "0.39.6", features = ["disk"] } 
+sysinfo = { version = "0.40.0", features = ["disk"] } 
 
 # Database dependencies
-rusqlite = { version = "0.40.2", features = ["bundled"] }
+rusqlite = { version = "0.41.1", features = ["bundled"] }
 lazy_static = "1.5.0"
 
 [target.'cfg(windows)'.dependencies]
